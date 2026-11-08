@@ -48,6 +48,22 @@ public class Utils {
 		return MM.deserialize(s).decorationIfAbsent(TextDecoration.ITALIC, TextDecoration.State.FALSE);
 	}
 
+	public static boolean isAnvilName(@Nullable Component name) {
+		return name instanceof net.kyori.adventure.text.TextComponent t && t.children().isEmpty()
+				&& t.decoration(TextDecoration.ITALIC) == TextDecoration.State.NOT_SET;
+	}
+
+	@Nullable
+	public static net.kyori.adventure.text.format.TextColor firstColour(@Nullable Component c) {
+		if(c == null) return null;
+		if(c.color() != null) return c.color();
+		for(Component child : c.children()) {
+			net.kyori.adventure.text.format.TextColor colour = firstColour(child);
+			if(colour != null) return colour;
+		}
+		return null;
+	}
+
 	/** Chat message / entity custom-name component from a MiniMessage string (no forced italic). */
 	public static Component msg(String s) {
 		return MM.deserialize(s);

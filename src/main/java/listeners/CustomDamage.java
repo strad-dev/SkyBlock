@@ -1695,8 +1695,8 @@ public class CustomDamage implements Listener {
 				DamageType type;
 				switch(e.getCause()) {
 					case ENTITY_ATTACK, ENTITY_EXPLOSION, THORNS -> type = DamageType.MELEE;
-					case PROJECTILE, SONIC_BOOM -> type = DamageType.RANGED;
-					case DRAGON_BREATH, MAGIC -> type = DamageType.MAGIC;
+					case PROJECTILE -> type = DamageType.RANGED;
+					case DRAGON_BREATH, MAGIC, SONIC_BOOM -> type = DamageType.MAGIC;
 					case FALLING_BLOCK -> type = DamageType.ENVIRONMENTAL;
 					case LIGHTNING -> type = DamageType.IFRAME_ENVIRONMENTAL;
 					default -> {

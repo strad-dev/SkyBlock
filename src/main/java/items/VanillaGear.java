@@ -89,7 +89,7 @@ public final class VanillaGear {
 
 		// A VANILLA name comes from the material's default, not the stack's: the coloured name is a stored component and
 		// smithing copies it, so diamond -> netherite kept "Diamond Sword". Any other item_name (a /give or loot-table
-		// name) is the item's own and only gets recoloured. Anvil renames are custom_name and never touched.
+		// name) is the item's own and only gets recoloured.
 		Component name = item.getData(DataComponentTypes.ITEM_NAME);
 		if(name instanceof net.kyori.adventure.text.TranslatableComponent t
 				&& (t.key().startsWith("item.minecraft.") || t.key().startsWith("block.minecraft."))) {
@@ -97,6 +97,10 @@ public final class VanillaGear {
 		}
 		if(name != null) {
 			item.setData(DataComponentTypes.ITEM_NAME, name.color(NamedTextColor.NAMES.value(rarity.colour())));
+		}
+		Component rename = item.getData(DataComponentTypes.CUSTOM_NAME);
+		if(Utils.isAnvilName(rename)) {
+			item.setData(DataComponentTypes.CUSTOM_NAME, rename.color(NamedTextColor.NAMES.value(rarity.colour())));
 		}
 
 		Utils.hideInTooltip(item, DataComponentTypes.ATTRIBUTE_MODIFIERS, DataComponentTypes.ENCHANTMENTS);

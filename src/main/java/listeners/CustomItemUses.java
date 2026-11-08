@@ -77,6 +77,7 @@ public class CustomItemUses implements Listener {
 				entity.setCustomNameVisible(true);
 
 				if(isNameTag) {
+					entity.setRemoveWhenFarAway(false);
 					ServerPlayer serverPlayer = ((CraftPlayer) p).getHandle();
 					CriteriaTriggers.PLAYER_INTERACTED_WITH_ENTITY.trigger(
 						serverPlayer,

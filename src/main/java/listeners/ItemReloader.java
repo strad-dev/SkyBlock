@@ -156,8 +156,8 @@ public class ItemReloader implements Listener {
 	 *  {@code BetterAnvil}. */
 	@EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST)
 	public void onPrepareAnvil(org.bukkit.event.inventory.PrepareAnvilEvent e) {
-		ItemStack dressed = dressVanilla(e.getResult());
-		if(dressed != null) e.setResult(dressed);
+		ItemStack rebuilt = rebuildResult(e.getResult(), e.getView().getPlayer());
+		if(rebuilt != null) e.setResult(rebuilt);
 	}
 
 	@EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST)
@@ -184,8 +184,14 @@ public class ItemReloader implements Listener {
 
 	@EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST)
 	public void onPrepareGrindstone(org.bukkit.event.inventory.PrepareGrindstoneEvent e) {
-		ItemStack dressed = dressVanilla(e.getResult());
-		if(dressed != null) e.setResult(dressed);
+		ItemStack rebuilt = rebuildResult(e.getResult(), e.getView().getPlayer());
+		if(rebuilt != null) e.setResult(rebuilt);
+	}
+
+	@Nullable
+	private static ItemStack rebuildResult(@Nullable ItemStack result, org.bukkit.entity.HumanEntity viewer) {
+		ItemStack rebuilt = rebuild(result, viewer instanceof Player p ? p : null);
+		return rebuilt == null || rebuilt.equals(result) ? null : rebuilt;
 	}
 
 	/**
@@ -430,7 +436,16 @@ public class ItemReloader implements Listener {
 			newItem.addUnsafeEnchantments(enchants);
 		}
 		newItem.setAmount(item.getAmount());
+		keepAnvilName(item, newItem);
 		Utils.enchantsBelowStats(newItem);
 		return newItem;
+	}
+
+	private static void keepAnvilName(ItemStack old, ItemStack fresh) {
+		net.kyori.adventure.text.Component name = old.getItemMeta().customName();
+		if(!Utils.isAnvilName(name)) return;
+		ItemMeta meta = fresh.getItemMeta();
+		meta.customName(name.color(Utils.firstColour(meta.customName())));
+		fresh.setItemMeta(meta);
 	}
 }
