@@ -4,7 +4,7 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.*;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.PositionMoveRotation;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.decoration.ArmorStand;
@@ -33,11 +33,11 @@ public class GuardianBeams {
 		guardians = new Guardian[count];
 		targets = new ArmorStand[count];
 		for(int i = 0; i < count; i++) {
-			ArmorStand target = new ArmorStand(EntityType.ARMOR_STAND, level);
+			ArmorStand target = new ArmorStand(EntityTypes.ARMOR_STAND, level);
 			target.setMarker(true);
 			target.setInvisible(true);
 			target.setNoGravity(true);
-			Guardian guardian = new Guardian(EntityType.GUARDIAN, level);
+			Guardian guardian = new Guardian(EntityTypes.GUARDIAN, level);
 			guardian.setInvisible(true);
 			guardian.setSilent(true);
 			guardian.setNoGravity(true);

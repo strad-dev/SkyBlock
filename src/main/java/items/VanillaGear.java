@@ -106,6 +106,14 @@ public final class VanillaGear {
 		Utils.hideInTooltip(item, DataComponentTypes.ATTRIBUTE_MODIFIERS, DataComponentTypes.ENCHANTMENTS);
 	}
 
+	public static Rarity rarityOf(ItemStack item) {
+		ItemAttributeModifiers attributes = item.getData(DataComponentTypes.ATTRIBUTE_MODIFIERS);
+		if((attributes != null && !attributes.modifiers().isEmpty()) || NO_STATS.contains(item.getType())) return rarity(item);
+		if(item.getType() == Material.ENCHANTED_BOOK) return Rarity.COMMON;
+		org.bukkit.inventory.ItemRarity vanilla = item.getData(DataComponentTypes.RARITY);
+		return vanilla == null ? Rarity.COMMON : Rarity.valueOf(vanilla.name());
+	}
+
 	private static Rarity rarity(ItemStack item) {
 		Rarity special = SPECIAL.get(item.getType());
 		if(special != null) return special;

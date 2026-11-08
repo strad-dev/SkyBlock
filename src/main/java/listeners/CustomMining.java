@@ -102,8 +102,9 @@ public class CustomMining implements Listener {
 						Utils.damageItem(p, itemInHand, 1); // *technically* this isnt needed becuase only divan pick can drop double
 					}
 					if(random.nextDouble() < 0.001 * fortuneMulti) {
-						world.dropItemNaturally(l, ConcentratedStone.getItem());
-						sendRareDropMessage(p, "Concentrated Stone");
+						ItemStack rare = ConcentratedStone.getItem();
+						world.dropItemNaturally(l, rare);
+						sendRareDropMessage(p, rare, "Concentrated Stone");
 					}
 				}
 				case COAL_ORE, DEEPSLATE_COAL_ORE -> {
@@ -127,8 +128,9 @@ public class CustomMining implements Listener {
 						world.dropItemNaturally(dropLocation, item);
 					}
 					if(random.nextDouble() < 0.0025 * fortuneMulti) {
-						world.dropItemNaturally(l, RefinedLapis.getItem());
-						sendRareDropMessage(p, "Refined Lapis");
+						ItemStack rare = RefinedLapis.getItem();
+						world.dropItemNaturally(l, rare);
+						sendRareDropMessage(p, rare, "Refined Lapis");
 					}
 				}
 				case IRON_ORE, DEEPSLATE_IRON_ORE -> {
@@ -138,8 +140,9 @@ public class CustomMining implements Listener {
 						world.dropItemNaturally(dropLocation, item);
 					}
 					if(random.nextDouble() < 0.0025 * fortuneMulti) {
-						world.dropItemNaturally(l, RefinedIron.getItem());
-						sendRareDropMessage(p, "Refined Iron");
+						ItemStack rare = RefinedIron.getItem();
+						world.dropItemNaturally(l, rare);
+						sendRareDropMessage(p, rare, "Refined Iron");
 					}
 				}
 				case GOLD_ORE, DEEPSLATE_GOLD_ORE -> {
@@ -149,8 +152,9 @@ public class CustomMining implements Listener {
 						world.dropItemNaturally(dropLocation, item);
 					}
 					if(random.nextDouble() < 0.0025 * fortuneMulti) {
-						world.dropItemNaturally(l, RefinedGold.getItem());
-						sendRareDropMessage(p, "Refined Gold");
+						ItemStack rare = RefinedGold.getItem();
+						world.dropItemNaturally(l, rare);
+						sendRareDropMessage(p, rare, "Refined Gold");
 					}
 				}
 				case REDSTONE_ORE, DEEPSLATE_REDSTONE_ORE -> {
@@ -160,8 +164,9 @@ public class CustomMining implements Listener {
 						world.dropItemNaturally(dropLocation, item);
 					}
 					if(random.nextDouble() < 0.0025 * fortuneMulti) {
-						world.dropItemNaturally(l, RefinedRedstone.getItem());
-						sendRareDropMessage(p, "Refined Redstone");
+						ItemStack rare = RefinedRedstone.getItem();
+						world.dropItemNaturally(l, rare);
+						sendRareDropMessage(p, rare, "Refined Redstone");
 					}
 				}
 				case DIAMOND_ORE, DEEPSLATE_DIAMOND_ORE -> {
@@ -171,14 +176,16 @@ public class CustomMining implements Listener {
 						world.dropItemNaturally(dropLocation, item);
 					}
 					if(random.nextDouble() < 0.005 * fortuneMulti) {
-						world.dropItemNaturally(l, RefinedDiamond.getItem());
-						sendRareDropMessage(p, "Refined Diamond");
+						ItemStack rare = RefinedDiamond.getItem();
+						world.dropItemNaturally(l, rare);
+						sendRareDropMessage(p, rare, "Refined Diamond");
 					}
 				}
 				case ANCIENT_DEBRIS -> {
 					if(autoSmeltDebris(e, itemInHand) && random.nextDouble() < 0.01 * fortuneMulti) {
-						world.dropItemNaturally(l, RefinedNetherite.getItem());
-						sendRareDropMessage(p, "Refined Netherite");
+						ItemStack rare = RefinedNetherite.getItem();
+						world.dropItemNaturally(l, rare);
+						sendRareDropMessage(p, rare, "Refined Netherite");
 					}
 				}
 				case EMERALD_ORE, DEEPSLATE_EMERALD_ORE -> {
@@ -188,8 +195,9 @@ public class CustomMining implements Listener {
 						world.dropItemNaturally(dropLocation, item);
 					}
 					if(random.nextDouble() < 0.02 * fortuneMulti) {
-						world.dropItemNaturally(l, RefinedEmerald.getItem());
-						sendRareDropMessage(p, "Refined Emerald");
+						ItemStack rare = RefinedEmerald.getItem();
+						world.dropItemNaturally(l, rare);
+						sendRareDropMessage(p, rare, "Refined Emerald");
 					}
 				}
 			}

@@ -320,31 +320,31 @@ public class WitherKing implements CustomWither {
 		}
 		item = MaxorSecrets.getItem();
 		world.dropItemNaturally(l, item);
-		sendRareDropMessage(p, "Maxor's Secrets");
+		sendRareDropMessage(p, item, "Maxor's Secrets");
 		item = ShadowWarp.getItem();
 		world.dropItemNaturally(l, item);
-		sendRareDropMessage(p, "Shadow Warp");
+		sendRareDropMessage(p, item, "Shadow Warp");
 		item = StormSecrets.getItem();
 		world.dropItemNaturally(l, item);
-		sendRareDropMessage(p, "Storm's Secrets");
+		sendRareDropMessage(p, item, "Storm's Secrets");
 		item = Implosion.getItem();
 		world.dropItemNaturally(l, item);
-		sendRareDropMessage(p, "Implosion");
+		sendRareDropMessage(p, item, "Implosion");
 		item = GoldorSecrets.getItem();
 		world.dropItemNaturally(l, item);
-		sendRareDropMessage(p, "Goldor's Secrets");
+		sendRareDropMessage(p, item, "Goldor's Secrets");
 		item = WitherShield.getItem();
 		world.dropItemNaturally(l, item);
-		sendRareDropMessage(p, "Wither Shield");
+		sendRareDropMessage(p, item, "Wither Shield");
 		item = NecronSecrets.getItem();
 		world.dropItemNaturally(l, item);
-		sendRareDropMessage(p, "Necron's Secrets");
+		sendRareDropMessage(p, item, "Necron's Secrets");
 		item = Handle.getItem();
 		world.dropItemNaturally(l, item);
-		sendRareDropMessage(p, "Necron's Handle");
+		sendRareDropMessage(p, item, "Necron's Handle");
 		item = WitherKingCrown.getItem();
 		world.dropItemNaturally(l, item);
-		sendRareDropMessage(p, "Crown of the Wither King");
+		sendRareDropMessage(p, item, "Crown of the Wither King");
 
 		CustomMobs.updateWitherLordFight(false);
 

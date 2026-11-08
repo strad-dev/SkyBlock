@@ -543,14 +543,24 @@ public class Utils {
 	 * Notifies the player that they received a rare drop
 	 *
 	 * @param p       The Player that received the drop
+	 * @param item    The dropped item, whose rarity colours the name
 	 * @param message The name of the item
 	 */
-	public static void sendRareDropMessage(Player p, String message) {
+	public static void sendRareDropMessage(Player p, ItemStack item, String message) {
 		if(p != null) {
-			p.sendMessage(msg("<gold><bold>RARE DROP!  <reset>" + message));
+			p.sendMessage(msg("<gold><bold>RARE DROP!  <reset><" + rarityColour(item) + ">" + message));
 			Bukkit.getLogger().info(p.getName() + " dropped a " + message);
 			p.playSound(p.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0F, 1.0F);
 		}
+	}
+
+	public static String rarityColour(ItemStack item) {
+		if(firstLorePlain(item).startsWith("skyblock/")) {
+			net.kyori.adventure.text.format.TextColor colour = firstColour(item.getData(DataComponentTypes.CUSTOM_NAME));
+			if(colour == null) colour = firstColour(item.getData(DataComponentTypes.ITEM_NAME));
+			if(colour != null) return colour.asHexString();
+		}
+		return items.VanillaGear.rarityOf(item).colour();
 	}
 
 	/**
