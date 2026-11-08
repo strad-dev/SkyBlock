@@ -12,6 +12,8 @@ import java.util.Random;
 import static listeners.CustomMobs.spawnLightning;
 
 public class Storm implements CustomWither {
+	public static final double LIGHTNING_DAMAGE = 6;
+
 	@Override
 	public String onSpawn(Player p, Mob e) {
 		e.setCanPickupItems(false);
@@ -28,7 +30,7 @@ public class Storm implements CustomWither {
 		wither.getWorld().setWeatherDuration(1000000);
 		Bukkit.broadcast(Utils.msg("<red><bold>STORM, most explosive Wither in the universe, has come to smite you with his Lightning!"));
 		Bukkit.getLogger().info("Storm has been summoned!");
-		Utils.scheduleTask(() -> spawnLightning(wither, 64), 200);
+		Utils.scheduleTask(() -> spawnLightning(wither, 64, LIGHTNING_DAMAGE), 200);
 		return newName;
 	}
 
@@ -41,13 +43,13 @@ public class Storm implements CustomWither {
 	public boolean whenDamaging(LivingEntity damagee, Entity damager, double originalDamage, DamageType type, DamageData data) {
 		Random random = new Random();
 		if(random.nextBoolean()) {
-			damagee.getWorld().spawnEntity(damagee.getLocation(), EntityType.LIGHTNING_BOLT);
+			CustomMobs.strike(damagee.getLocation(), LIGHTNING_DAMAGE);
 		}
 		return true;
 	}
 
 	@Override
 	public void whenShootingSkull(WitherSkull skull) {
-		CustomMobs.spawnLightning(skull, 32);
+		CustomMobs.spawnLightning(skull, 32, LIGHTNING_DAMAGE);
 	}
 }

@@ -1,18 +1,24 @@
 package listeners;
 
+import misc.Plugin;
 import misc.Utils;
 import mobs.enderDragons.CustomDragon;
 import mobs.hardmode.enderDragons.PrimalDragon;
 import mobs.hardmode.withers.Maxor;
 import mobs.withers.CustomWither;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockIgniteEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.EntityCombustByEntityEvent;
 import org.bukkit.event.entity.EntitySpawnEvent;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffectType;
 
 import java.util.List;
@@ -31,12 +37,46 @@ public class CustomMobs implements Listener {
 	 * @param radius the radius to spawn lightning on
 	 */
 	public static void spawnLightning(Entity entity, int radius) {
+		spawnLightning(entity, radius, 0);
+	}
+
+	public static void spawnLightning(Entity entity, int radius, double boltDamage) {
 		List<Entity> entities = (List<Entity>) entity.getWorld().getNearbyEntities(entity.getLocation(), radius, 320, radius);
+		List<EntityType> doNotKill = CustomItems.createList();
 		for(Entity temp : entities) {
-			if(temp instanceof LivingEntity entity1) {
-				entity.getWorld().spawnEntity(entity1.getLocation(), EntityType.LIGHTNING_BOLT);
+			if(!doNotKill.contains(temp.getType()) && temp instanceof LivingEntity entity1) {
+				strike(entity1.getLocation(), boltDamage);
 			}
 		}
+	}
+
+	private static NamespacedKey boltKey;
+
+	private static NamespacedKey boltKey() {
+		if(boltKey == null) boltKey = new NamespacedKey(Plugin.getInstance(), "bolt_damage");
+		return boltKey;
+	}
+
+	public static void strike(Location l, double damage) {
+		l.getWorld().spawn(l, LightningStrike.class, bolt -> {
+			if(damage > 0) bolt.getPersistentDataContainer().set(boltKey(), PersistentDataType.DOUBLE, damage);
+		});
+	}
+
+	public static double boltDamage(Entity e) {
+		if(!(e instanceof LightningStrike bolt)) return 0;
+		Double damage = bolt.getPersistentDataContainer().get(boltKey(), PersistentDataType.DOUBLE);
+		return damage == null ? 0 : damage;
+	}
+
+	@EventHandler(ignoreCancelled = true)
+	public void onBoltIgnite(BlockIgniteEvent e) {
+		if(boltDamage(e.getIgnitingEntity()) > 0) e.setCancelled(true);
+	}
+
+	@EventHandler(ignoreCancelled = true)
+	public void onBoltCombust(EntityCombustByEntityEvent e) {
+		if(boltDamage(e.getCombuster()) > 0) e.setCancelled(true);
 	}
 
 	/**

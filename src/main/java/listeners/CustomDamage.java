@@ -1203,7 +1203,8 @@ public class CustomDamage implements Listener {
 		while(amount > 0) {
 			int value = net.minecraft.world.entity.ExperienceOrb.getExperienceValue(amount);
 			amount -= value;
-			net.minecraft.world.entity.ExperienceOrb orb = new net.minecraft.world.entity.ExperienceOrb(level, pos, Vec3.ZERO, value);
+			net.minecraft.world.entity.ExperienceOrb orb = new net.minecraft.world.entity.ExperienceOrb(level, pos, Vec3.ZERO, value,
+					org.bukkit.entity.ExperienceOrb.SpawnReason.CUSTOM, null, null);
 			orb.addTag(UNMERGED_ORB);
 			level.addFreshEntity(orb);
 		}
@@ -1745,6 +1746,9 @@ public class CustomDamage implements Listener {
 
 					// Crit rides on DamageData, not a second getFallDistance() test: it's already priced in above, and
 					// particles, sound and PvP stats must all name the same blow.
+					double boltDamage = CustomMobs.boltDamage(damager);
+					if(boltDamage > 0) e.setDamage(boltDamage);
+
 					DamageData data = new DamageData(e);
 					data.isCrit = crit;
 					customMobs(entity, damager, e.getDamage(), type, data);
@@ -1761,7 +1765,7 @@ public class CustomDamage implements Listener {
 	@EventHandler(ignoreCancelled = true)
 	public void onVehiclePushed(io.papermc.paper.event.entity.EntityPushedByEntityAttackEvent e) {
 		if(!(e.getEntity() instanceof Vehicle) || e.getEntity() instanceof LivingEntity) return;
-		e.setAcceleration(e.getAcceleration().setY(0));
+		e.setKnockback(e.getKnockback().setY(0));
 	}
 
 	private final Map<LivingEntity, Long> noDamageTimes = new WeakHashMap<>();

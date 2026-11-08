@@ -3,6 +3,7 @@ package mobs.hardmode.generic;
 import listeners.CustomDamage;
 import listeners.DamageType;
 import misc.DamageData;
+import misc.GuardianBeams;
 import misc.Plugin;
 import misc.Utils;
 import mobs.CustomMob;
@@ -15,15 +16,14 @@ import org.bukkit.block.Block;
 import org.bukkit.craftbukkit.entity.CraftEnderman;
 import org.bukkit.entity.*;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.Vector;
 
 import java.time.Duration;
 import java.util.*;
 
 public class VoidcrazedSeraph implements CustomMob {
 	private static final List<Block> beacons = new ArrayList<>();
-	// Red DUST is far cheaper than FLAME (no animation, physics or lighting). Constant so ~960 beam
-	// particles/tick don't each allocate a DustOptions.
-	private static final Particle.DustOptions DANGER_DUST = new Particle.DustOptions(Color.RED, 1.0F);
+	private static final int BEAM_LEAD_TICKS = 2;
 
 	@Override
 	public String onSpawn(Player p, Mob e) {
@@ -134,33 +134,27 @@ public class VoidcrazedSeraph implements CustomMob {
 			// Spinning danger beams
 			final int[] tickCounter = {0};
 			Location center = damagee.getLocation();
+			GuardianBeams beams = new GuardianBeams(center.getWorld(), 6);
 			BukkitTask beamTask = Bukkit.getScheduler().runTaskTimer(Plugin.getInstance(), () -> {
 				if(!damagee.isValid() || damagee.isDead()) {
+					beams.remove();
 					return;
 				}
 
 				// Calculate rotation angle (full rotation over DURATION ticks)
 				double rotationAngle = (tickCounter[0] * 2 * Math.PI) / 240;
 
-				// Create 4 sets of beams at 90-degree intervals
-				for(int direction = 0; direction < 4; direction++) {
-					double angle = (direction * Math.PI / 2) + rotationAngle;
-
-					// Stack beams for each block of Enderman height (3 blocks)
-					for(int height = 0; height < 3; height++) {
-						double y = center.getY() + height + 0.5;
-
-						// Draw the beam with particles
-						for(double distance = 0; distance < 24; distance += 0.25) {
-							double x = center.getX() + Math.cos(angle) * distance;
-							double z = center.getZ() + Math.sin(angle) * distance;
-
-							Location particleLocation = new Location(center.getWorld(), x, y, z);
-
-							center.getWorld().spawnParticle(Particle.DUST, particleLocation, 1, DANGER_DUST);
-						}
+				double visualAngle = ((tickCounter[0] + BEAM_LEAD_TICKS) * 2 * Math.PI) / 240;
+				for(int height = 0; height < 3; height++) {
+					double y = center.getY() + height + 0.5;
+					for(int axis = 0; axis < 2; axis++) {
+						double angle = (axis * Math.PI / 2) + visualAngle;
+						double dx = Math.cos(angle) * 24;
+						double dz = Math.sin(angle) * 24;
+						beams.set(height * 2 + axis, new Vector(center.getX() + dx, y, center.getZ() + dz), new Vector(center.getX() - dx, y, center.getZ() - dz));
 					}
 				}
+				beams.update();
 
 				// Check collision every 10 ticks
 				if(tickCounter[0] % 10 == 0) {
@@ -204,6 +198,7 @@ public class VoidcrazedSeraph implements CustomMob {
 			// Stop the beams after DURATION ticks
 			Utils.scheduleTask(() -> {
 				beamTask.cancel();
+				beams.remove();
 				// Re-enable AI after the attack
 				damagee.setAI(true);
 				damagee.removeScoreboardTag("Invulnerable");

@@ -25,6 +25,7 @@ import static misc.Utils.teleport;
 
 public class Storm implements CustomWither {
 	private static final String name = "<gold><bold>﴾ <red><bold>Storm<gold><bold> ﴿";
+	public static final double LIGHTNING_DAMAGE = 6;
 
 	@Override
 	public String onSpawn(Player p, Mob e) {
@@ -111,10 +112,10 @@ public class Storm implements CustomWither {
 	private void spawnLightning(Wither wither) {
 		if(!wither.isDead() && !wither.getScoreboardTags().contains("Survival2") && !wither.getScoreboardTags().contains("Dead")) {
 			if(wither.getScoreboardTags().contains("Survival1")) {
-				CustomMobs.spawnLightning(wither, 24);
+				CustomMobs.spawnLightning(wither, 24, LIGHTNING_DAMAGE);
 				Utils.scheduleTask(() -> spawnLightning(wither), 100);
 			} else {
-				CustomMobs.spawnLightning(wither, 16);
+				CustomMobs.spawnLightning(wither, 16, LIGHTNING_DAMAGE);
 				Utils.scheduleTask(() -> spawnLightning(wither), 200);
 			}
 		}
@@ -123,10 +124,10 @@ public class Storm implements CustomWither {
 	private void spawnMoreLightning(Wither wither) {
 		if(!wither.isDead() && !wither.getScoreboardTags().contains("Dead")) {
 			if(wither.getScoreboardTags().contains("Survival2")) {
-				CustomMobs.spawnLightning(wither, 32);
+				CustomMobs.spawnLightning(wither, 32, LIGHTNING_DAMAGE);
 				Utils.scheduleTask(() -> spawnMoreLightning(wither), 60);
 			} else {
-				CustomMobs.spawnLightning(wither, 16);
+				CustomMobs.spawnLightning(wither, 16, LIGHTNING_DAMAGE);
 				Utils.scheduleTask(() -> spawnMoreLightning(wither), 200);
 			}
 		}
@@ -277,7 +278,7 @@ public class Storm implements CustomWither {
 		} else if(damager.getScoreboardTags().contains("Survival2")) {
 			calculateFinalDamage(damagee, damager, 18, DamageType.RANGED);
 		}
-		damagee.getWorld().spawnEntity(damagee.getLocation(), EntityType.LIGHTNING_BOLT);
+		CustomMobs.strike(damagee.getLocation(), LIGHTNING_DAMAGE);
 		return true;
 	}
 
