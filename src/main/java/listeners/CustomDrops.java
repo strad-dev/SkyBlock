@@ -32,17 +32,10 @@ import static misc.Utils.sendRareDropMessage;
 @SuppressWarnings({"DataFlowIssue"})
 public class CustomDrops implements Listener {
 	public static void loot(LivingEntity died, Entity killer) {
-		Player p;
+		Player p = killer instanceof Player p1 ? p1 : CustomDamage.recentPlayerHit(died);
 		int lootingLevel = 0;
-		if(killer instanceof Player p1) {
-			p = p1;
-			try {
-				lootingLevel = Math.min(5, p1.getInventory().getItemInMainHand().getEnchantmentLevel(Enchantment.LOOTING));
-			} catch(Exception exception) {
-				// do nothing
-			}
-		} else {
-			p = Utils.getNearestPlayer(died, 16);
+		if(p != null) {
+			lootingLevel = Math.min(5, p.getInventory().getItemInMainHand().getEnchantmentLevel(Enchantment.LOOTING));
 		}
 		double rngLootingBonus = 1.0;
 		switch(lootingLevel) {

@@ -706,7 +706,7 @@ public class CustomDamage implements Listener {
 	}
 
 	@javax.annotation.Nullable
-	private static Player recentPlayerHit(LivingEntity damagee) {
+	static Player recentPlayerHit(LivingEntity damagee) {
 		PlayerHit hit = lastPlayerHit.get(damagee.getUniqueId());
 		if(hit == null || net.minecraft.server.MinecraftServer.currentTick - hit.tick() > DOT_CREDIT_TICKS) return null;
 		return Bukkit.getPlayer(hit.player());
