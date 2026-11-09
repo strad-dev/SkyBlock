@@ -31,7 +31,7 @@ This is a plugin intended to extend the gameplay of survival Minecraft by bringi
 * **This plugin is intended to be used without any other combat-related plugins. It has not been tested with other plugins (and probably won't be for the foreseeable future)**
 
 # Install the plugin
-Go to the [releases](https://github.com/strad-dev/HypixelSBInVanillaMC/releases) page and download the latest version.
+Go to the [releases](https://github.com/strad-dev/SkyBlock/releases) page and download the latest version.
 Add it to your server by dragging it into the `plugins` folder once downloaded.
 
 **REQUIRES SPIGOT OR PAPER**

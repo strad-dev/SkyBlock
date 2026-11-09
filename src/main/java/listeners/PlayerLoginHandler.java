@@ -23,7 +23,7 @@ public class PlayerLoginHandler implements Listener {
 				 <blue><bold><obfuscated>E</obfuscated> Hypixel SkyBlock in Vanilla Minecraft Plugin <obfuscated>E</obfuscated><reset>
 				<black>---<dark_blue>---<dark_green>---<dark_aqua>---<dark_red>---<dark_purple>---<gold>---<gray>---\
 				<dark_gray>---<blue>---<green>---<aqua>---<red>---<light_purple>---<yellow>---<white>---
-				<reset><aqua><bold>GITHUB: <reset><click:open_url:'https://github.com/strad-dev/HypixelSBInVanillaMC'><u>https://github.com/strad-dev/HypixelSBInVanillaMC</u></click>
+				<reset><aqua><bold>GITHUB: <reset><click:open_url:'https://github.com/strad-dev/SkyBlock'><u>https://github.com/strad-dev/SkyBlock</u></click>
 
 				<reset><blue><bold>DISCORD: <reset><click:open_url:'https://discord.gg/gNfPwa8'><u>https://discord.gg/gNfPwa8</u></click>
 
