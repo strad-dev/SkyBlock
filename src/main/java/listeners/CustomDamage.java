@@ -656,6 +656,26 @@ public class CustomDamage implements Listener {
 		if(curledArmadillo(entity)) e.setDamage(e.getDamage() * 2 + 1);
 	}
 
+	private static void hurtEffects(LivingEntity damagee, DamageData data) {
+		net.minecraft.world.entity.LivingEntity nms = ((CraftLivingEntity) damagee).getHandle();
+		float hurtYaw = 0.0F;
+		if(data.sourcePosition != null) {
+			double dx = data.sourcePosition.getX() - nms.getX();
+			double dz = data.sourcePosition.getZ() - nms.getZ();
+			if(dx * dx + dz * dz > 1.0E-7) {
+				hurtYaw = (float) (Math.toDegrees(Math.atan2(dz, dx)) - nms.getYRot() - 90.0);
+			}
+		}
+		damagee.playHurtAnimation(hurtYaw);
+		if(!(nms.level() instanceof ServerLevel level)) return;
+		DamageSource source = data.e != null ? convertBukkitDamageSource(data.e.getDamageSource(), damagee) : nms.damageSources().generic();
+		level.broadcastDamageEvent(nms, source);
+		net.minecraft.sounds.SoundEvent sound = nms.getHurtSound(source);
+		if(sound != null) {
+			level.playSound(damagee instanceof Player ? nms : null, nms.getX(), nms.getY(), nms.getZ(), sound, nms.getSoundSource(), nms.getSoundVolume(), nms.getVoicePitch());
+		}
+	}
+
 	private static void dealDamage(LivingEntity damagee, Entity damager, double finalDamage, DamageType type, DamageData data) {
 		if(!damagee.isDead() && (finalDamage > 0 || type == DamageType.RANGED || type == DamageType.RANGED_SPECIAL || curledArmadillo(damagee)) && (damagee.getNoDamageTicks() == 0 || type == DamageType.RANGED || type == DamageType.RANGED_SPECIAL || type == DamageType.MAGIC || type == DamageType.PLAYER_MAGIC || type == DamageType.ABSOLUTE || type == DamageType.LETHAL_ABSOLUTE)) {
 			// sweeping edge
@@ -670,8 +690,7 @@ public class CustomDamage implements Listener {
 				}
 			}
 
-			damagee.playHurtAnimation(0.0F);
-			damagee.getWorld().playSound(damagee, Objects.requireNonNull(damagee.getHurtSound()), 1.0F, 1.0F);
+			hurtEffects(damagee, data);
 
 			double absorption = damagee.getAbsorptionAmount();
 			double oldHealth = damagee.getHealth();

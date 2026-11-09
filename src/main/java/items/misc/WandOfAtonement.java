@@ -68,6 +68,7 @@ public class WandOfAtonement implements AbilityItem {
 				double cur = p.getHealth();
 				if(cur < maxHealth) {
 					p.setHealth(Math.min(cur + 1, maxHealth));
+					p.sendHealthUpdate();
 					pvp.PvpHooks.trackHeal(p, 1);
 				}
 			}, i);

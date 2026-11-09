@@ -120,7 +120,7 @@ public class CustomMobs implements Listener {
 								Utils.scheduleTask(() -> {
 									Wither wither2 = (Wither) wither.getWorld().spawnEntity(wither.getLocation(), EntityType.WITHER);
 									new Maxor().onSpawn(p, wither2);
-								}, 240);
+								}, 120);
 								isWitherLordFightActive = true;
 								Utils.scheduleTask(() -> {
 									Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
@@ -128,16 +128,12 @@ public class CustomMobs implements Listener {
 								}, 20);
 								Utils.scheduleTask(() -> {
 									Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
-									Bukkit.broadcast(Utils.msg("<gold><bold>﴾ <red><bold>Maxor<gold><bold> ﴿<red><bold>: I HAVE BEEN PRACTISING 40 HOURS A DAY SINCE WE LAST MET!"));
-								}, 80);
-								Utils.scheduleTask(() -> {
-									Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
 									Bukkit.broadcast(Utils.msg("<gold><bold>﴾ <red><bold>Maxor<gold><bold> ﴿<red><bold>: MY TRICKS ARE MORE SOPHISTICATED THAN EVER; YOU WILL NEVER GET AROUND THEM!"));
-								}, 140);
+								}, 60);
 								Utils.scheduleTask(() -> {
 									Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
 									Bukkit.broadcast(Utils.msg("<gold><bold>﴾ <red><bold>Maxor<gold><bold> ﴿<red><bold>: NOW LET'S HAVE SOME FUN HERE!"));
-								}, 200);
+								}, 100);
 								Bukkit.getLogger().info("A player has initiated the Wither Lords fight!");
 							} else {
 								name = CustomWither.spawnRandom().onSpawn(p, wither);

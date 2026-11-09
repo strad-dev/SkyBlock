@@ -60,18 +60,18 @@ public class Necron implements CustomWither {
 		wither.setAI(false);
 		Bukkit.getOnlinePlayers().forEach(p -> p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 40, 0)));
 		teleport(wither, 16, false);
-		for(int i = 0; i < 161; i += 20) {
+		for(int i = 0; i < 81; i += 20) {
 			int finalI = i;
 			Utils.scheduleTask(() -> {
 				Utils.playGlobalSound(Sound.ENTITY_GENERIC_EXPLODE, 1.0F, 0.5F);
 				Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT, 2.0f, 0.67f);
-				Utils.spawnTNT(wither, wither.getLocation(), 0, 8 + (finalI / 40), 32 + (finalI / 20) * 2, new ArrayList<>());
+				Utils.spawnTNT(wither, wither.getLocation(), 0, 8 + (finalI / 20), 48 + (finalI / 10) * 4, new ArrayList<>());
 			}, i);
 		}
 		Utils.scheduleTask(() -> {
 			wither.removeScoreboardTag("Invulnerable");
 			wither.setAI(true);
-		}, 161);
+		}, 80);
 
 		if(which == 1100) {
 			wither.removeScoreboardTag("1100Frenzy");
@@ -127,35 +127,33 @@ public class Necron implements CustomWither {
 			damager.getWorld().playSound(damager, Sound.ENTITY_WITHER_HURT, 1.0F, 1.0F);
 			Bukkit.broadcast(Utils.msg(name + "<red><bold>: You have destroyed us... but you have not destroyed our forefather."));
 			Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
+			damagee.remove();
+			Utils.playGlobalSound(Sound.ENTITY_WITHER_DEATH);
+			Utils.spawnTNT(damagee, damagee.getLocation(), 0, 32, 75, new ArrayList<>());
 			Utils.scheduleTask(() -> {
 				Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
 				Bukkit.broadcast(Utils.msg(name + "<red><bold>: He is a very powerful being.  If you wish to defeat Him, tread carefully."));
-			}, 60);
+			}, 40);
 			Utils.scheduleTask(() -> {
-				damagee.remove();
-				Utils.playGlobalSound(Sound.ENTITY_WITHER_DEATH);
-				Utils.spawnTNT(damagee, damagee.getLocation(), 0, 32, 75, new ArrayList<>());
+				Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT, 1.0F, 0.667F);
+				Bukkit.broadcast(Utils.msg("<gold><bold>﴾ <red><bold><obfuscated>Wither-King</obfuscated><gold><bold> ﴿<red><bold>: Who dares wake me from my slumber?"));
 			}, 100);
 			Utils.scheduleTask(() -> {
 				Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT, 1.0F, 0.667F);
-				Bukkit.broadcast(Utils.msg("<gold><bold>﴾ <red><bold>Wither-King<gold><bold> ﴿<red><bold>: Who dares wake me from my slumber?"));
-			}, 240);
+				Bukkit.broadcast(Utils.msg("<gold><bold>﴾ <red><bold><obfuscated>Wither-King</obfuscated><gold><bold> ﴿<red><bold>: Foolish players!  You do not know who you are dealing with!"));
+			}, 160);
 			Utils.scheduleTask(() -> {
 				Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT, 1.0F, 0.667F);
-				Bukkit.broadcast(Utils.msg("<gold><bold>﴾ <red><bold>Wither-King<gold><bold> ﴿<red><bold>: Foolish players!  You do not know who you are dealing with!"));
-			}, 320);
+				Bukkit.broadcast(Utils.msg("<gold><bold>﴾ <red><bold><obfuscated>Wither-King</obfuscated><gold><bold> ﴿<red><bold>: I do not wish to fight, but you leave me no choice."));
+			}, 220);
 			Utils.scheduleTask(() -> {
 				Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT, 1.0F, 0.667F);
-				Bukkit.broadcast(Utils.msg("<gold><bold>﴾ <red><bold>Wither-King<gold><bold> ﴿<red><bold>: I do not wish to fight, but you leave me no choice."));
-			}, 400);
-			Utils.scheduleTask(() -> {
-				Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT, 1.0F, 0.667F);
-				Bukkit.broadcast(Utils.msg("<gold><bold>﴾ <red><bold>Wither-King<gold><bold> ﴿<red><bold>: Prepare to meet your ultimate demise."));
-			}, 480);
+				Bukkit.broadcast(Utils.msg("<gold><bold>﴾ <red><bold><obfuscated>Wither-King</obfuscated><gold><bold> ﴿<red><bold>: Prepare to meet your ultimate demise."));
+			}, 280);
 			Utils.scheduleTask(() -> {
 				Wither wither = (Wither) damagee.getWorld().spawnEntity(damagee.getLocation(), EntityType.WITHER);
 				CustomMob.getMob("WitherKing", true).onSpawn((damager instanceof Player p ? p : Utils.getNearestPlayer(damagee)), wither);
-			}, 540);
+			}, 320);
 			return false;
 		}
 		return true;

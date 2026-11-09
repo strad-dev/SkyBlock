@@ -79,27 +79,25 @@ public class Goldor implements CustomWither {
 			damager.getWorld().playSound(damager, Sound.ENTITY_WITHER_HURT, 1.0F, 1.0F);
 			Bukkit.broadcast(Utils.msg(name + "<red><bold>: How did you break through my shield???"));
 			Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
+			damagee.remove();
+			Utils.playGlobalSound(Sound.ENTITY_WITHER_DEATH);
+			Utils.spawnTNT(damagee, damagee.getLocation(), 0, 32, 50, new ArrayList<>());
 			Utils.scheduleTask(() -> {
 				Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
 				Bukkit.broadcast(Utils.msg(name + "<red><bold>: Either way I don't think you're getting past Necron."));
 			}, 60);
 			Utils.scheduleTask(() -> {
-				damagee.remove();
-				Utils.playGlobalSound(Sound.ENTITY_WITHER_DEATH);
-				Utils.spawnTNT(damagee, damagee.getLocation(), 0, 32, 50, new ArrayList<>());
+				Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
+				Bukkit.broadcast(Utils.msg("<gold><bold>﴾ <red><bold>Necron<gold><bold> ﴿<red><bold>: I have heard a lot about you."));
 			}, 100);
 			Utils.scheduleTask(() -> {
 				Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
-				Bukkit.broadcast(Utils.msg("<gold><bold>﴾ <red><bold>Necron<gold><bold> ﴿<red><bold>: I have heard a lot about you."));
-			}, 240);
-			Utils.scheduleTask(() -> {
-				Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
 				Bukkit.broadcast(Utils.msg("<gold><bold>﴾ <red><bold>Necron<gold><bold> ﴿<red><bold>: Your perseverence is immeasurable, but your journey ends here.  Goodbye."));
-			}, 300);
+			}, 140);
 			Utils.scheduleTask(() -> {
 				Wither wither = (Wither) damagee.getWorld().spawnEntity(damagee.getLocation(), EntityType.WITHER);
 				CustomMob.getMob("Necron", true).onSpawn((damager instanceof Player p ? p : Utils.getNearestPlayer(damagee)), wither);
-			}, 340);
+			}, 160);
 			return false;
 		}
 		return true;

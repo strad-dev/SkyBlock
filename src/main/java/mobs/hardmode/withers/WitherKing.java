@@ -83,17 +83,17 @@ public class WitherKing implements CustomWither {
 			Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT, 1.0F, 0.667F);
 			Bukkit.broadcast(Utils.msg(chatName + "<red><bold>: One more to join the fray.  I hope you are having fun!"));
 			spawnHenchman(wither, ordering.get(2));
-		}, 640);
+		}, 440);
 		Utils.scheduleTask(() -> {
 			Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT, 1.0F, 0.667F);
 			Bukkit.broadcast(Utils.msg(chatName + "<red><bold>: Another one can't hurt, can it?"));
 			spawnHenchman(wither, ordering.get(3));
-		}, 1240);
+		}, 840);
 		Utils.scheduleTask(() -> {
 			Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT, 1.0F, 0.667F);
 			Bukkit.broadcast(Utils.msg(chatName + "<red><bold>: My last Henchman.  Go forth and destroy the insolent players!"));
 			spawnHenchman(wither, ordering.get(4));
-		}, 1840);
+		}, 1240);
 
 		spawnGuards(wither);
 		boom(wither);
@@ -262,7 +262,7 @@ public class WitherKing implements CustomWither {
 		} else if(hp - originalDamage < minHealth && countHenchmenLeft() != 0) {
 			if(hp == minHealth) {
 				if(damager instanceof Player p) {
-					p.showTitle(Title.title(Utils.msg("<red><bold>IMMUNE"), Utils.msg("<yellow>You cannot damage Wither-King<green>!"), Title.Times.times(Duration.ZERO, Duration.ofMillis(20L * 50L), Duration.ZERO)));
+					p.showTitle(Title.title(Utils.msg("<red><bold>IMMUNE"), Utils.msg("<yellow>You cannot damage <obfuscated>Wither-King</obfuscated><green>!"), Title.Times.times(Duration.ZERO, Duration.ofMillis(20L * 50L), Duration.ZERO)));
 				}
 				damagee.getWorld().playSound(damagee, Sound.BLOCK_ANVIL_PLACE, 0.5F, 0.5F);
 			} else {
@@ -286,19 +286,19 @@ public class WitherKing implements CustomWither {
 			Utils.scheduleTask(() -> {
 				Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT, 1.0F, 0.667F);
 				Bukkit.broadcast(Utils.msg(chatName + "<red><bold>: Congratulations, you have proven yourself as a mighty warrior."));
-			}, 80);
+			}, 60);
 			Utils.scheduleTask(() -> {
 				Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT, 1.0F, 0.667F);
 				Bukkit.broadcast(Utils.msg(chatName + "<red><bold>: My strength slips away... I can see the light at the end of the tunnel."));
-			}, 160);
+			}, 120);
 			Utils.scheduleTask(() -> {
 				Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT, 1.0F, 0.667F);
 				Bukkit.broadcast(Utils.msg(chatName + "<red><bold>: Goodbye cruel world!  I hope to never see it again!"));
-			}, 240);
+			}, 180);
 			Utils.scheduleTask(() -> {
 				damagee.remove();
 				Utils.playGlobalSound(Sound.ENTITY_WITHER_DEATH, 1.0F, 1.0F);
-			}, 320);
+			}, 300);
 			Utils.scheduleTask(() -> dropLoot(damagee, damager), 420);
 			return false;
 		}

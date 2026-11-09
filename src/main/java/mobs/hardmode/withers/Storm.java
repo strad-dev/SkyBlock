@@ -58,29 +58,29 @@ public class Storm implements CustomWither {
 
 		spawnGuards(wither);
 		spawnLightning(wither);
-		for(int i = 0; i < 600; i += 15) {
+		for(int i = 0; i < 400; i += 10) {
 			spamSkulls(wither, Utils.getNearestPlayer(wither), i);
 		}
 		Utils.scheduleTask(() -> {
 			Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
 			Bukkit.broadcast(Utils.msg(name + "<red><bold>: Are you enjoying the party?  I sure am while watching you suffer!"));
-		}, 200);
+		}, 140);
 		Utils.scheduleTask(() -> {
 			Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
 			Bukkit.broadcast(Utils.msg(name + "<red><bold>: When I'm not making lightning, I love creating explosions!"));
-		}, 480);
-		Utils.scheduleTask(() -> Bukkit.getOnlinePlayers().forEach(p2 -> p2.showTitle(Title.title(Utils.msg("<red><bold>5"), Utils.msg("<yellow><bold>BOOM!"), Title.Times.times(Duration.ZERO, Duration.ofMillis(21L * 50L), Duration.ZERO)))), 500);
-		Utils.scheduleTask(() -> Bukkit.getOnlinePlayers().forEach(p2 -> p2.showTitle(Title.title(Utils.msg("<red><bold>4"), Utils.msg("<yellow><bold>BOOM!"), Title.Times.times(Duration.ZERO, Duration.ofMillis(21L * 50L), Duration.ZERO)))), 520);
-		Utils.scheduleTask(() -> Bukkit.getOnlinePlayers().forEach(p2 -> p2.showTitle(Title.title(Utils.msg("<red><bold>3"), Utils.msg("<yellow><bold>BOOM!"), Title.Times.times(Duration.ZERO, Duration.ofMillis(21L * 50L), Duration.ZERO)))), 540);
-		Utils.scheduleTask(() -> Bukkit.getOnlinePlayers().forEach(p2 -> p2.showTitle(Title.title(Utils.msg("<red><bold>2"), Utils.msg("<yellow><bold>BOOM!"), Title.Times.times(Duration.ZERO, Duration.ofMillis(21L * 50L), Duration.ZERO)))), 560);
-		Utils.scheduleTask(() -> Bukkit.getOnlinePlayers().forEach(p2 -> p2.showTitle(Title.title(Utils.msg("<red><bold>1"), Utils.msg("<yellow><bold>BOOM!"), Title.Times.times(Duration.ZERO, Duration.ofMillis(21L * 50L), Duration.ZERO)))), 580);
+		}, 280);
+		Utils.scheduleTask(() -> Bukkit.getOnlinePlayers().forEach(p2 -> p2.showTitle(Title.title(Utils.msg("<red><bold>5"), Utils.msg("<yellow><bold>BOOM!"), Title.Times.times(Duration.ZERO, Duration.ofMillis(21L * 50L), Duration.ZERO)))), 300);
+		Utils.scheduleTask(() -> Bukkit.getOnlinePlayers().forEach(p2 -> p2.showTitle(Title.title(Utils.msg("<red><bold>4"), Utils.msg("<yellow><bold>BOOM!"), Title.Times.times(Duration.ZERO, Duration.ofMillis(21L * 50L), Duration.ZERO)))), 320);
+		Utils.scheduleTask(() -> Bukkit.getOnlinePlayers().forEach(p2 -> p2.showTitle(Title.title(Utils.msg("<red><bold>3"), Utils.msg("<yellow><bold>BOOM!"), Title.Times.times(Duration.ZERO, Duration.ofMillis(21L * 50L), Duration.ZERO)))), 340);
+		Utils.scheduleTask(() -> Bukkit.getOnlinePlayers().forEach(p2 -> p2.showTitle(Title.title(Utils.msg("<red><bold>2"), Utils.msg("<yellow><bold>BOOM!"), Title.Times.times(Duration.ZERO, Duration.ofMillis(21L * 50L), Duration.ZERO)))), 360);
+		Utils.scheduleTask(() -> Bukkit.getOnlinePlayers().forEach(p2 -> p2.showTitle(Title.title(Utils.msg("<red><bold>1"), Utils.msg("<yellow><bold>BOOM!"), Title.Times.times(Duration.ZERO, Duration.ofMillis(21L * 50L), Duration.ZERO)))), 380);
 		Utils.scheduleTask(() -> {
 			Bukkit.getOnlinePlayers().forEach(p2 -> p2.showTitle(Title.title(Utils.msg("<red><bold>BOOM!"), Utils.msg(""), Title.Times.times(Duration.ZERO, Duration.ofMillis(21L * 50L), Duration.ZERO))));
 			Utils.spawnTNT(wither, wither.getLocation(), 0, 64, 200, immune);
 			wither.removeScoreboardTag("Survival1");
 			wither.removeScoreboardTag("Invulnerable");
 			wither.setAI(true);
-		}, 600);
+		}, 400);
 
 		return name;
 	}
@@ -89,10 +89,10 @@ public class Storm implements CustomWither {
 		if(!wither.isDead() && !wither.getScoreboardTags().contains("Survival2") && !wither.getScoreboardTags().contains("Dead")) {
 			if(wither.getScoreboardTags().contains("Survival1")) {
 				Utils.spawnGuards(wither, 2);
-				Utils.scheduleTask(() -> spawnGuards(wither), 201);
+				Utils.scheduleTask(() -> spawnGuards(wither), 100);
 			} else {
 				Utils.spawnGuards(wither, 2);
-				Utils.scheduleTask(() -> spawnGuards(wither), 301);
+				Utils.scheduleTask(() -> spawnGuards(wither), 300);
 			}
 		}
 	}
@@ -101,10 +101,10 @@ public class Storm implements CustomWither {
 		if(!wither.isDead() && !wither.getScoreboardTags().contains("Dead")) {
 			if(wither.getScoreboardTags().contains("Survival2")) {
 				Utils.spawnGuards(wither, 3);
-				Utils.scheduleTask(() -> spawnMoreGuards(wither), 151);
+				Utils.scheduleTask(() -> spawnMoreGuards(wither), 80);
 			} else {
 				Utils.spawnGuards(wither, 2);
-				Utils.scheduleTask(() -> spawnMoreGuards(wither), 301);
+				Utils.scheduleTask(() -> spawnMoreGuards(wither), 300);
 			}
 		}
 	}
@@ -113,7 +113,7 @@ public class Storm implements CustomWither {
 		if(!wither.isDead() && !wither.getScoreboardTags().contains("Survival2") && !wither.getScoreboardTags().contains("Dead")) {
 			if(wither.getScoreboardTags().contains("Survival1")) {
 				CustomMobs.spawnLightning(wither, 24, LIGHTNING_DAMAGE);
-				Utils.scheduleTask(() -> spawnLightning(wither), 100);
+				Utils.scheduleTask(() -> spawnLightning(wither), 65);
 			} else {
 				CustomMobs.spawnLightning(wither, 16, LIGHTNING_DAMAGE);
 				Utils.scheduleTask(() -> spawnLightning(wither), 200);
@@ -125,7 +125,7 @@ public class Storm implements CustomWither {
 		if(!wither.isDead() && !wither.getScoreboardTags().contains("Dead")) {
 			if(wither.getScoreboardTags().contains("Survival2")) {
 				CustomMobs.spawnLightning(wither, 32, LIGHTNING_DAMAGE);
-				Utils.scheduleTask(() -> spawnMoreLightning(wither), 60);
+				Utils.scheduleTask(() -> spawnMoreLightning(wither), 40);
 			} else {
 				CustomMobs.spawnLightning(wither, 16, LIGHTNING_DAMAGE);
 				Utils.scheduleTask(() -> spawnMoreLightning(wither), 200);
@@ -204,20 +204,20 @@ public class Storm implements CustomWither {
 
 			spawnMoreGuards((Wither) damagee);
 			spawnMoreLightning((Wither) damagee);
-			for(int i = 0; i < 600; i += 10) {
+			for(int i = 0; i < 400; i += 7) {
 				spamSkulls((Wither) damagee, Utils.getNearestPlayer(damagee), i);
 			}
 			Utils.scheduleTask(() -> {
 				Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
 				Bukkit.broadcast(Utils.msg(name + "<red><bold>: Still alive?  You won’t survive what’s coming!"));
-			}, 200);
+			}, 160);
 			Utils.scheduleTask(() -> {
 				Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
 				Bukkit.broadcast(Utils.msg(name + "<red><bold>: I wasn't giving my all in that last explosion.  Good luck getting past this one!"));
-			}, 520);
-			Utils.scheduleTask(() -> Bukkit.getOnlinePlayers().forEach(p2 -> p2.showTitle(Title.title(Utils.msg("<red><bold>3"), Utils.msg("<yellow><bold>BIGGER BOOM!"), Title.Times.times(Duration.ZERO, Duration.ofMillis(21L * 50L), Duration.ZERO)))), 540);
-			Utils.scheduleTask(() -> Bukkit.getOnlinePlayers().forEach(p2 -> p2.showTitle(Title.title(Utils.msg("<red><bold>2"), Utils.msg("<yellow><bold>BIGGER BOOM!"), Title.Times.times(Duration.ZERO, Duration.ofMillis(21L * 50L), Duration.ZERO)))), 560);
-			Utils.scheduleTask(() -> Bukkit.getOnlinePlayers().forEach(p2 -> p2.showTitle(Title.title(Utils.msg("<red><bold>1"), Utils.msg("<yellow><bold>BIGGER BOOM!"), Title.Times.times(Duration.ZERO, Duration.ofMillis(21L * 50L), Duration.ZERO)))), 580);
+			}, 320);
+			Utils.scheduleTask(() -> Bukkit.getOnlinePlayers().forEach(p2 -> p2.showTitle(Title.title(Utils.msg("<red><bold>3"), Utils.msg("<yellow><bold>BIGGER BOOM!"), Title.Times.times(Duration.ZERO, Duration.ofMillis(21L * 50L), Duration.ZERO)))), 340);
+			Utils.scheduleTask(() -> Bukkit.getOnlinePlayers().forEach(p2 -> p2.showTitle(Title.title(Utils.msg("<red><bold>2"), Utils.msg("<yellow><bold>BIGGER BOOM!"), Title.Times.times(Duration.ZERO, Duration.ofMillis(21L * 50L), Duration.ZERO)))), 360);
+			Utils.scheduleTask(() -> Bukkit.getOnlinePlayers().forEach(p2 -> p2.showTitle(Title.title(Utils.msg("<red><bold>1"), Utils.msg("<yellow><bold>BIGGER BOOM!"), Title.Times.times(Duration.ZERO, Duration.ofMillis(21L * 50L), Duration.ZERO)))), 380);
 			Utils.scheduleTask(() -> {
 				Bukkit.getOnlinePlayers().forEach(p2 -> p2.showTitle(Title.title(Utils.msg("<red><bold>BIGGER BOOM!"), Utils.msg(""), Title.Times.times(Duration.ZERO, Duration.ofMillis(21L * 50L), Duration.ZERO))));
 				List<EntityType> immune = new ArrayList<>();
@@ -226,7 +226,7 @@ public class Storm implements CustomWither {
 				damagee.removeScoreboardTag("Survival2");
 				damagee.removeScoreboardTag("Invulnerable");
 				damagee.setAI(true);
-			}, 600);
+			}, 400);
 			WitherBoss nmsWither = ((CraftWither) damagee).getHandle();
 			nmsWither.bossEvent.setProgress(nmsWither.getHealth() / 1000);
 			return false;
@@ -242,27 +242,25 @@ public class Storm implements CustomWither {
 			damager.getWorld().playSound(damager, Sound.ENTITY_WITHER_HURT, 1.0F, 1.0F);
 			Bukkit.broadcast(Utils.msg(name + "<red><bold>: I knew I should have prepared better."));
 			Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
+			damagee.remove();
+			Utils.playGlobalSound(Sound.ENTITY_WITHER_DEATH);
+			Utils.spawnTNT(damagee, damagee.getLocation(), 0, 32, 50, new ArrayList<>());
 			Utils.scheduleTask(() -> {
 				Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
 				Bukkit.broadcast(Utils.msg(name + "<red><bold>: Have fun dealing with the others."));
-			}, 60);
-			Utils.scheduleTask(() -> {
-				damagee.remove();
-				Utils.playGlobalSound(Sound.ENTITY_WITHER_DEATH);
-				Utils.spawnTNT(damagee, damagee.getLocation(), 0, 32, 50, new ArrayList<>());
-			}, 100);
+			}, 40);
 			Utils.scheduleTask(() -> {
 				Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
 				Bukkit.broadcast(Utils.msg("<gold><bold>﴾ <red><bold>Goldor<gold><bold> ﴿<red><bold>: I hear some vermin prowling around my territory."));
-			}, 240);
+			}, 100);
 			Utils.scheduleTask(() -> {
 				Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
 				Bukkit.broadcast(Utils.msg("<gold><bold>﴾ <red><bold>Goldor<gold><bold> ﴿<red><bold>: I hope you came prepared for a long fight!"));
-			}, 300);
+			}, 140);
 			Utils.scheduleTask(() -> {
 				Wither wither = (Wither) damagee.getWorld().spawnEntity(damagee.getLocation(), EntityType.WITHER);
 				CustomMob.getMob("Goldor", true).onSpawn((damager instanceof Player p ? p : Utils.getNearestPlayer(damagee)), wither);
-			}, 340);
+			}, 160);
 			return false;
 		}
 		return true;

@@ -157,27 +157,25 @@ public class Maxor implements CustomWither {
 			damager.getWorld().playSound(damager, Sound.ENTITY_WITHER_HURT, 1.0F, 1.0F);
 			Bukkit.broadcast(Utils.msg(name + "<red><bold>: HOW DID YOU DEFEAT ME?!?!?!"));
 			Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
+			damagee.remove();
+			Utils.playGlobalSound(Sound.ENTITY_WITHER_DEATH);
+			Utils.spawnTNT(damagee, damagee.getLocation(), 0, 32, 50, new ArrayList<>());
 			Utils.scheduleTask(() -> {
 				Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
 				Bukkit.broadcast(Utils.msg(name + "<red><bold>: THIS IS ONLY THE BEGINNING!!!"));
-			}, 60);
-			Utils.scheduleTask(() -> {
-				damagee.remove();
-				Utils.playGlobalSound(Sound.ENTITY_WITHER_DEATH);
-				Utils.spawnTNT(damagee, damagee.getLocation(), 0, 32, 50, new ArrayList<>());
-			}, 100);
+			}, 40);
 			Utils.scheduleTask(() -> {
 				Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
 				Bukkit.broadcast(Utils.msg("<gold><bold>﴾ <red><bold>Storm<gold><bold> ﴿<red><bold>: It seems that you have defeated my brother."));
-			}, 240);
+			}, 100);
 			Utils.scheduleTask(() -> {
 				Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
 				Bukkit.broadcast(Utils.msg("<gold><bold>﴾ <red><bold>Storm<gold><bold> ﴿<red><bold>: No worries, the party is just getting started!"));
-			}, 300);
+			}, 140);
 			Utils.scheduleTask(() -> {
 				Wither wither = (Wither) damagee.getWorld().spawnEntity(damagee.getLocation(), EntityType.WITHER);
 				CustomMob.getMob("Storm", true).onSpawn((damager instanceof Player p ? p : Utils.getNearestPlayer(damagee)), wither);
-			}, 340);
+			}, 160);
 			return false;
 		}
 		return true;
