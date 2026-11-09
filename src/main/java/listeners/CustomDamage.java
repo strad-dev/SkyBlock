@@ -332,8 +332,10 @@ public class CustomDamage implements Listener {
 
 		// 2. our enchantment bonus, then 3. the crit over both.
 		double enchant = vanillaEnchant + scale * delta;
-		return Math.max(0, (base + enchant) * (crit ? 1.5 : 1));
+		return Math.max(0, (base + enchant) * (crit ? CRIT_MULTIPLIER : 1));
 	}
+
+	public static final double CRIT_MULTIPLIER = 1.5;
 
 	private static final double ARMOR_CURVE_K = 5;
 
@@ -515,6 +517,19 @@ public class CustomDamage implements Listener {
 		calculateFinalDamage(damagee, damager, finalDamage, type, new DamageData(damagee, damager, finalDamage));
 	}
 
+	public static final double FALL_FLAT_REDUCTION = 1;
+	public static final double FEATHER_FALLING_PER_LEVEL = 0.16;
+	public static final double FALL_MULTIPLIER_FLOOR = 0.2;
+
+	public static int featherFallingLevel(LivingEntity e) {
+		EntityEquipment eq = e.getEquipment();
+		return eq == null ? 0 : eq.getBoots().getEnchantmentLevel(Enchantment.FEATHER_FALLING);
+	}
+
+	public static double featherFallingMultiplier(LivingEntity e) {
+		return Math.max(FALL_MULTIPLIER_FLOOR, 1 - featherFallingLevel(e) * FEATHER_FALLING_PER_LEVEL);
+	}
+
 	public static void calculateFinalDamage(LivingEntity damagee, Entity damager, double finalDamage, DamageType type, DamageData data) {
 		if(isDyingDragon(damagee)) return; // see customMobs; a boss's whenDamaged calls in here directly
 		if(!(DamageType.isAbsoluteDamage(type))) {
@@ -609,8 +624,7 @@ public class CustomDamage implements Listener {
 				}
 
 				if(type == DamageType.FALL) {
-					double featherFalling = boots.getEnchantmentLevel(Enchantment.FEATHER_FALLING);
-					finalDamage *= Math.max(0.2, (1 - featherFalling * 0.16) * damagee.getAttribute(Attribute.FALL_DAMAGE_MULTIPLIER).getValue());
+					finalDamage *= featherFallingMultiplier(damagee);
 					if(finalDamage < 1) {
 						finalDamage = 0;
 					}
@@ -676,6 +690,42 @@ public class CustomDamage implements Listener {
 		}
 	}
 
+	private static final Map<DamageCause, String> DOT_COLOURS = Map.of(
+			DamageCause.FIRE, "<gold>",
+			DamageCause.FIRE_TICK, "<gold>",
+			DamageCause.POISON, "<dark_green>",
+			DamageCause.WITHER, "<black>");
+	private static final int DOT_CREDIT_TICKS = 200;
+	private record PlayerHit(UUID player, int tick) {}
+	private static final Map<UUID, PlayerHit> lastPlayerHit = new HashMap<>();
+
+	private static void notePlayerHit(LivingEntity damagee, Player attacker) {
+		int now = net.minecraft.server.MinecraftServer.currentTick;
+		if(lastPlayerHit.size() > 1000) lastPlayerHit.values().removeIf(hit -> now - hit.tick() > DOT_CREDIT_TICKS);
+		lastPlayerHit.put(damagee.getUniqueId(), new PlayerHit(attacker.getUniqueId(), now));
+	}
+
+	@javax.annotation.Nullable
+	private static Player recentPlayerHit(LivingEntity damagee) {
+		PlayerHit hit = lastPlayerHit.get(damagee.getUniqueId());
+		if(hit == null || net.minecraft.server.MinecraftServer.currentTick - hit.tick() > DOT_CREDIT_TICKS) return null;
+		return Bukkit.getPlayer(hit.player());
+	}
+
+	private static final int KILL_CREDIT_TICKS = 100;
+
+	private static void noteKillCredit(LivingEntity damagee, Entity damager) {
+		LivingEntity credit = damager instanceof LivingEntity living ? living
+				: damager instanceof Projectile projectile && projectile.getShooter() instanceof LivingEntity shooter ? shooter : null;
+		if(credit == null || credit.equals(damagee)) return;
+		net.minecraft.world.entity.LivingEntity victim = ((CraftLivingEntity) damagee).getHandle();
+		net.minecraft.world.entity.LivingEntity attacker = ((CraftLivingEntity) credit).getHandle();
+		victim.setLastHurtByMob(attacker);
+		if(attacker instanceof net.minecraft.world.entity.player.Player player) {
+			victim.setLastHurtByPlayer(player, KILL_CREDIT_TICKS);
+		}
+	}
+
 	private static void dealDamage(LivingEntity damagee, Entity damager, double finalDamage, DamageType type, DamageData data) {
 		if(!damagee.isDead() && (finalDamage > 0 || type == DamageType.RANGED || type == DamageType.RANGED_SPECIAL || curledArmadillo(damagee)) && (damagee.getNoDamageTicks() == 0 || type == DamageType.RANGED || type == DamageType.RANGED_SPECIAL || type == DamageType.MAGIC || type == DamageType.PLAYER_MAGIC || type == DamageType.ABSOLUTE || type == DamageType.LETHAL_ABSOLUTE)) {
 			// sweeping edge
@@ -699,6 +749,27 @@ public class CustomDamage implements Listener {
 			// here since it's the final figure: the absorption split below spends part of it and the health removed
 			// is capped by what the target had left.
 			data.damageDealt = finalDamage;
+			Player numberFor = damager instanceof Player attacker ? attacker
+					: damager instanceof Projectile projectile && projectile.getShooter() instanceof Player shooter ? shooter : null;
+			if(damagee instanceof Player) {
+				noteKillCredit(damagee, damager);
+			}
+			String dotColour = null;
+			if(numberFor != null) {
+				notePlayerHit(damagee, numberFor);
+			} else if(damager == null && data.e != null && DOT_COLOURS.containsKey(data.e.getCause())) {
+				numberFor = recentPlayerHit(damagee);
+				dotColour = DOT_COLOURS.get(data.e.getCause());
+			}
+			if(numberFor != null && damagee instanceof Mob) {
+				if(dotColour != null) {
+					misc.DamageNumbers.show(damagee, finalDamage, dotColour, numberFor);
+				} else {
+					boolean critNumber = data.isCrit || damager instanceof AbstractArrow arrow
+							&& (arrow.isCritical() || arrow.getScoreboardTags().contains("TerminatorArrow"));
+					misc.DamageNumbers.show(damagee, finalDamage, critNumber, numberFor);
+				}
+			}
 			commands.VanillaDamageCommand.record(damagee, finalDamage);
 
 			// PvP layer (config-gated, inert off the pvp server): record this hit for arena/duel combat stats.
@@ -1814,7 +1885,7 @@ public class CustomDamage implements Listener {
 			uncurl(entity, e);
 			double damage = e.getDamage();
 			if(type == DamageType.FALL) {
-				damage--;
+				damage -= FALL_FLAT_REDUCTION;
 			}
 
 			long currentTime = System.currentTimeMillis();

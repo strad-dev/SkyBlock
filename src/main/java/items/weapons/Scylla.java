@@ -313,7 +313,7 @@ public class Scylla implements AbilityItem {
 		}
 
 		// implosion: a sphere from the eyes to the nearest point of each hitbox
-		p.getWorld().spawnParticle(Particle.EXPLOSION, l, 20);
+		Utils.bigExplosion(l, radius);
 		Location eye = p.getEyeLocation();
 		List<Entity> entities = new ArrayList<>(eye.getWorld().getNearbyEntities(eye, radius, radius, radius,
 				entity -> withinSphere(eye, entity, radius)));

@@ -574,23 +574,21 @@ public class Utils {
 	 * @param damage      The damage of the beam
 	 */
 	public static void shootBeam(Entity origin, Entity destination, Color color, long distance, long pierce, double damage) {
-		Location l = origin.getLocation();
+		Location start = origin.getLocation();
 		if(origin instanceof LivingEntity entity) {
-			l = entity.getEyeLocation();
+			start = entity.getEyeLocation();
 		}
-		Vector v;
-		if(origin.equals(destination) || destination == null) {
-			v = l.getDirection();
-		} else {
-			Location destinationLocation = destination.getLocation().add(0, destination.getHeight() / 2, 0);
-			double x = destinationLocation.getX() - l.getX();
-			double y = destinationLocation.getY() - l.getY();
-			double z = destinationLocation.getZ() - l.getZ();
-			v = new Vector(x, y, z);
+		Vector dir = start.getDirection();
+		if(destination != null && !origin.equals(destination)) {
+			Vector toTarget = destination.getLocation().add(0, destination.getHeight() / 2, 0).toVector().subtract(start.toVector());
+			if(toTarget.lengthSquared() > 1.0E-7) {
+				dir = toTarget;
+			}
 		}
-		v.setX(v.getX() / 5);
-		v.setY(v.getY() / 5);
-		v.setZ(v.getZ() / 5);
+		dir.normalize();
+		Vector v = dir.clone().multiply(0.2);
+		Location l = start.clone();
+		double travelled = 0;
 		World world = origin.getWorld();
 		Set<Entity> damagedEntities = new HashSet<>();
 		damagedEntities.add(origin);
@@ -606,11 +604,16 @@ public class Utils {
 					pierce--;
 				}
 			}
-			Particle.DustOptions particle = new Particle.DustOptions(color, 1.0F);
-			world.spawnParticle(Particle.DUST, l, 1, particle);
 			l.add(v);
+			travelled += 0.2;
+		}
+		Particle.DustOptions particle = new Particle.DustOptions(color, 1.0F);
+		for(int k = 0; k * BEAM_PARTICLE_SPACING < travelled; k++) {
+			world.spawnParticle(Particle.DUST, start.clone().add(dir.clone().multiply(k * BEAM_PARTICLE_SPACING)), 1, particle);
 		}
 	}
+
+	private static final double BEAM_PARTICLE_SPACING = 1.0 / 3.0;
 
 	private static DamageData tntData(LivingEntity victim, Entity spawner, double damage) {
 		DamageData data = new DamageData(victim, spawner, damage);
@@ -628,6 +631,10 @@ public class Utils {
 	 * @param damage  the amount of damage to deal
 	 * @param immune  represents which entity types are immune to damage; by default, no entity types are immune and the spawner is always immune
 	 */
+	public static void bigExplosion(Location l, double radius) {
+		l.getWorld().spawnParticle(Particle.EXPLOSION, l, 0, 2.0 - radius, 0.0, 0.0, 1.0, null, true);
+	}
+
 	public static void spawnTNT(Entity spawner, Location l, int fuse, int radius, int damage, List<EntityType> immune) {
 		if(fuse == 0) {
 			List<Entity> entities = (List<Entity>) l.getWorld().getNearbyEntities(l, radius, radius, radius);
@@ -636,7 +643,7 @@ public class Utils {
 					CustomDamage.customMobs(entity1, spawner, damage, DamageType.PLAYER_MAGIC, tntData(entity1, spawner, damage));
 				}
 			}
-			spawner.getWorld().spawnParticle(Particle.EXPLOSION, spawner.getLocation(), Math.min((int) Math.pow(radius, 3), 16384), radius, radius / 2.0, radius);
+			bigExplosion(spawner.getLocation(), radius);
 			spawner.getWorld().playSound(spawner.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 2.0F, 0.6F);
 		} else {
 			TNTPrimed tnt = (TNTPrimed) l.getWorld().spawnEntity(l, EntityType.TNT);
@@ -650,7 +657,7 @@ public class Utils {
 						CustomDamage.customMobs(entity1, spawner, damage, DamageType.PLAYER_MAGIC, tntData(entity1, spawner, damage));
 					}
 				}
-				tnt.getWorld().spawnParticle(Particle.EXPLOSION, tnt.getLocation(), Math.min((int) Math.pow(radius, 3), 16384), radius, radius / 2.0, radius);
+				bigExplosion(tnt.getLocation(), radius);
 				tnt.getWorld().playSound(tnt.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 2.0F, 0.6F);
 				tnt.remove();
 			}, fuse);

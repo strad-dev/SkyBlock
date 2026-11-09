@@ -298,8 +298,8 @@ public class WitherKing implements CustomWither {
 			Utils.scheduleTask(() -> {
 				damagee.remove();
 				Utils.playGlobalSound(Sound.ENTITY_WITHER_DEATH, 1.0F, 1.0F);
-			}, 300);
-			Utils.scheduleTask(() -> dropLoot(damagee, damager), 420);
+			}, 220);
+			Utils.scheduleTask(() -> dropLoot(damagee, damager), 320);
 			return false;
 		}
 

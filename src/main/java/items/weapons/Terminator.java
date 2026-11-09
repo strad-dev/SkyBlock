@@ -139,7 +139,7 @@ public class Terminator implements AbilityItem {
 		Vector rightDirection = baseDirection.clone().rotateAroundY(Math.toRadians(5));
 
 		// Calculate spawn position
-		Location spawnLoc = p.getEyeLocation().add(baseDirection.clone());
+		Location spawnLoc = p.getEyeLocation().add(0, -0.1, 0);
 
 		// 26.2 removed EntityType.ARROW, so use the position+item constructor with a null weapon.
 		// TerminatorArrow so our cancelled damage event can't deflect them.
@@ -189,6 +189,7 @@ public class Terminator implements AbilityItem {
 			arrow.setShooter(p);
 			arrow.setWeapon(p.getInventory().getItemInMainHand());
 			arrow.addScoreboardTag("TerminatorArrow");
+			listeners.ArrowMechanicsHandler.fullHitMargin(arrow);
 		}
 
 		p.playSound(p.getLocation(), Sound.ENTITY_ARROW_SHOOT, 1.0F, 1.0F);

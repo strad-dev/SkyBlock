@@ -115,43 +115,65 @@ public class Eq implements CommandExecutor, Listener {
 		}
 
 		boolean breakdown = showBreakdown.contains(p.getUniqueId());
+		boolean crit = showCrit.contains(p.getUniqueId());
+		double critFactor = crit ? CustomDamage.CRIT_MULTIPLIER : 1;
 		List<Component> lore = new ArrayList<>();
-		lore.add(Utils.mm("<gray>Damage: <red>" + Utils.damageNumber(damage * multiplier)));
+		lore.add(Utils.mm("<gray>Hit: " + (crit ? "<yellow>Critical" : "<white>Normal")));
+		lore.add(Utils.mm("<gray>Damage: <red>" + Utils.damageNumber(damage * critFactor * multiplier)));
 		if(breakdown) {
 			List<Component> parts = attributeBreakdown(p, Attribute.ATTACK_DAMAGE, "red");
 			int sharpness = held.getEnchantmentLevel(Enchantment.SHARPNESS);
 			if(sharpness > 0) {
 				parts.add(breakdownLine(Enchantment.SHARPNESS.displayName(sharpness), "+", CustomDamage.sharpnessBonus(sharpness), "red"));
 			}
+			if(crit) {
+				parts.add(breakdownLine(Component.text("Critical Hit"), "x", CustomDamage.CRIT_MULTIPLIER, "red"));
+			}
 			addSection(lore, parts);
 		}
-		addTypedDamage(lore, held, Enchantment.SMITE, "Undead", damage, multiplier, breakdown);
-		addTypedDamage(lore, held, Enchantment.BANE_OF_ARTHROPODS, "Arthropods", damage, multiplier, breakdown);
+		addTypedDamage(lore, held, Enchantment.SMITE, "Undead", damage, critFactor, multiplier, breakdown);
+		addTypedDamage(lore, held, Enchantment.BANE_OF_ARTHROPODS, "Arthropods", damage, critFactor, multiplier, breakdown);
+		if(Scylla.ID.equals(Utils.firstLorePlain(held))) {
+			int smite = held.getEnchantmentLevel(Enchantment.SMITE);
+			double smiteBonus = CustomDamage.smiteBonus(smite);
+			if(breakdown) lore.add(Component.empty());
+			lore.add(Utils.mm("<gray>Damage VS Withers: <red>" + Utils.damageNumber(((damage + smiteBonus) * critFactor + Scylla.WITHER_BONUS) * multiplier)));
+			if(breakdown) {
+				List<Component> parts = new ArrayList<>();
+				if(smite > 0) parts.add(breakdownLine(Enchantment.SMITE.displayName(smite), "+", smiteBonus, "red"));
+				parts.add(breakdownLine(held.effectiveName(), "+", Scylla.WITHER_BONUS, "red"));
+				addSection(lore, parts);
+			}
+		}
 		Double ability = abilityDamage(p, held);
 		if(ability != null) {
+			if(breakdown) lore.add(Component.empty());
 			lore.add(Utils.mm("<gray>Ability Damage: <red>" + Utils.tenthNumber(ability * multiplier)));
 		}
 		if(!modifiers.isEmpty()) {
 			lore.add(Component.empty());
 			lore.addAll(modifiers);
 		}
-		addToggleHint(lore, breakdown);
+		lore.add(Component.empty());
+		lore.add(Utils.mm("<dark_gray>Left-click to " + (breakdown ? "hide" : "show") + " breakdown"));
+		lore.add(Utils.mm("<dark_gray>Right-click to show " + (crit ? "normal" : "critical") + " hits"));
 		return statsItem(Material.DIAMOND_SWORD, "<red>Offensive Stats", lore);
 	}
 
 	private static void addTypedDamage(List<Component> lore, ItemStack held, Enchantment enchant, String against,
-			double damage, double multiplier, boolean breakdown) {
+			double damage, double critFactor, double multiplier, boolean breakdown) {
 		int level = held.getEnchantmentLevel(enchant);
 		if(level <= 0) return;
 		double bonus = CustomDamage.smiteBonus(level);
 		if(breakdown) lore.add(Component.empty());
-		lore.add(Utils.mm("<gray>Damage vs " + against + ": <red>" + Utils.damageNumber((damage + bonus) * multiplier)));
+		lore.add(Utils.mm("<gray>Damage VS " + against + ": <red>" + Utils.damageNumber((damage + bonus) * critFactor * multiplier)));
 		if(breakdown) addSection(lore, new ArrayList<>(List.of(breakdownLine(enchant.displayName(level), "+", bonus, "red"))));
 	}
 
 	// =================== Breakdown ===================
 
 	private static final Set<UUID> showBreakdown = new HashSet<>();
+	private static final Set<UUID> showCrit = new HashSet<>();
 	private static final NamespacedKey STRENGTH_KEY = NamespacedKey.minecraft("effect.strength");
 
 	private static void addSection(List<Component> lore, List<Component> parts) {
@@ -165,11 +187,7 @@ public class Eq implements CommandExecutor, Listener {
 		lore.add(Utils.mm("<dark_gray>Click to " + (breakdown ? "hide" : "show") + " breakdown"));
 	}
 
-	private static List<Component> attributeBreakdown(Player p, Attribute attribute, String colour) {
-		List<Component> out = new ArrayList<>();
-		AttributeInstance instance = p.getAttribute(attribute);
-		if(instance == null) return out;
-
+	private static Map<NamespacedKey, Component> itemSources(Player p, Attribute attribute) {
 		Map<NamespacedKey, Component> sources = new HashMap<>();
 		EntityEquipment equipment = p.getEquipment();
 		for(EquipmentSlot slot : EquipmentSlot.values()) {
@@ -184,6 +202,21 @@ public class Eq implements CommandExecutor, Listener {
 				}
 			}
 		}
+		return sources;
+	}
+
+	private static Component modifierLabel(Player p, NamespacedKey key, Map<NamespacedKey, Component> sources) {
+		Component label = sources.get(key);
+		if(label == null) label = effectLabel(p, key);
+		if(label == null) label = Component.text(key.asString());
+		return label;
+	}
+
+	private static List<Component> attributeBreakdown(Player p, Attribute attribute, String colour) {
+		List<Component> out = new ArrayList<>();
+		AttributeInstance instance = p.getAttribute(attribute);
+		if(instance == null) return out;
+		Map<NamespacedKey, Component> sources = itemSources(p, attribute);
 
 		if(instance.getBaseValue() != 0) {
 			out.add(breakdownLine(Component.text("Base"), "+", instance.getBaseValue(), colour));
@@ -192,9 +225,7 @@ public class Eq implements CommandExecutor, Listener {
 			NamespacedKey key = mod.getKey();
 			double amount = mod.getAmount();
 			if(key.equals(STRENGTH_KEY)) amount -= CustomDamage.strengthPenalty(p);
-			Component label = sources.get(key);
-			if(label == null) label = effectLabel(p, key);
-			if(label == null) label = Component.text(key.asString());
+			Component label = modifierLabel(p, key, sources);
 			out.add(switch(mod.getOperation()) {
 				case ADD_NUMBER -> breakdownLine(label, amount < 0 ? "-" : "+", Math.abs(amount), colour);
 				case ADD_SCALAR -> breakdownLine(label, amount < 0 ? "-" : "+", Math.abs(amount) * 100, colour)
@@ -241,34 +272,8 @@ public class Eq implements CommandExecutor, Listener {
 
 	private static ItemStack defenseItem(Player p) {
 		double armor = CustomDamage.armorPoints(p);
-		double taken = CustomDamage.armorMultiplier(armor);
-
 		List<Component> modifiers = new ArrayList<>();
-		int prot = CustomDamage.protectionLevels(p);
-		if(prot > 0) {
-			double m = CustomDamage.protectionMultiplier(prot);
-			taken *= m;
-			modifiers.add(modifierLine("Protection (" + prot + ")", m, false));
-		}
-		PotionEffect resistance = p.getPotionEffect(PotionEffectType.RESISTANCE);
-		if(resistance != null) {
-			double m = CustomDamage.resistanceMultiplier(p);
-			taken *= m;
-			modifiers.add(modifierLine("Resistance " + (resistance.getAmplifier() + 1), m, false));
-		}
-		if(p.getScoreboardTags().contains("WitherShield")) {
-			double m = 1 - Scylla.witherShieldReduction(p);
-			taken *= m;
-			modifiers.add(modifierLine("Wither Shield", m, false));
-		}
-		if(p.getScoreboardTags().contains("HolyIce")) {
-			taken *= HolyIce.DAMAGE_TAKEN;
-			modifiers.add(modifierLine("Holy Ice", HolyIce.DAMAGE_TAKEN, false));
-		}
-		if(p.getScoreboardTags().contains("IceSprayed")) {
-			taken *= IceSpray.DAMAGE_TAKEN_BONUS;
-			modifiers.add(modifierLine("Ice Sprayed", IceSpray.DAMAGE_TAKEN_BONUS, false));
-		}
+		double taken = CustomDamage.armorMultiplier(armor) * takenModifiers(p, modifiers);
 
 		boolean breakdown = showBreakdown.contains(p.getUniqueId());
 		List<Component> lore = new ArrayList<>();
@@ -299,11 +304,41 @@ public class Eq implements CommandExecutor, Listener {
 			String name = protection.equals(Enchantment.FIRE_PROTECTION) ? "Fire Protection"
 					: protection.equals(Enchantment.BLAST_PROTECTION) ? "Blast Protection" : "Projectile Protection";
 			lore.add(modifierLine(name + " (" + levels + ")", m, false));
-			lore.add(Utils.mm("<gray>Damage Taken vs " + against + ": <white>" + Utils.percent(taken * m)));
-			lore.add(effectiveHp("Effective HP vs " + against, health, taken * m));
+			lore.add(Utils.mm("<gray>Damage Taken VS " + against + ": <white>" + Utils.percent(taken * m)));
+			lore.add(effectiveHp("Effective HP VS " + against, health, taken * m));
 		}
 		addToggleHint(lore, breakdown);
 		return statsItem(Material.DIAMOND_CHESTPLATE, "<green>Defensive Stats", lore);
+	}
+
+	private static double takenModifiers(Player p, List<Component> lines) {
+		double taken = 1;
+		int prot = CustomDamage.protectionLevels(p);
+		if(prot > 0) {
+			double m = CustomDamage.protectionMultiplier(prot);
+			taken *= m;
+			lines.add(modifierLine("Protection (" + prot + ")", m, false));
+		}
+		PotionEffect resistance = p.getPotionEffect(PotionEffectType.RESISTANCE);
+		if(resistance != null) {
+			double m = CustomDamage.resistanceMultiplier(p);
+			taken *= m;
+			lines.add(modifierLine("Resistance " + (resistance.getAmplifier() + 1), m, false));
+		}
+		if(p.getScoreboardTags().contains("WitherShield")) {
+			double m = 1 - Scylla.witherShieldReduction(p);
+			taken *= m;
+			lines.add(modifierLine("Wither Shield", m, false));
+		}
+		if(p.getScoreboardTags().contains("HolyIce")) {
+			taken *= HolyIce.DAMAGE_TAKEN;
+			lines.add(modifierLine("Holy Ice", HolyIce.DAMAGE_TAKEN, false));
+		}
+		if(p.getScoreboardTags().contains("IceSprayed")) {
+			taken *= IceSpray.DAMAGE_TAKEN_BONUS;
+			lines.add(modifierLine("Ice Sprayed", IceSpray.DAMAGE_TAKEN_BONUS, false));
+		}
+		return taken;
 	}
 
 	private static Component effectiveHp(String label, double health, double taken) {
@@ -348,13 +383,96 @@ public class Eq implements CommandExecutor, Listener {
 
 	private static ItemStack speedItem(Player p) {
 		int speed = currentSpeed(p);
-		ItemStack cane = new ItemStack(Material.SUGAR_CANE);
-		ItemMeta meta = cane.getItemMeta();
-		if(meta != null) {
-			meta.displayName(Utils.mm("<aqua>Speed: <white>" + speed));
-			cane.setItemMeta(meta);
+		boolean breakdown = showBreakdown.contains(p.getUniqueId());
+		List<Component> lore = new ArrayList<>();
+		lore.add(Utils.mm("<gray>Speed: <aqua>" + speed));
+		if(breakdown) {
+			addSection(lore, speedBreakdown(p));
 		}
-		return cane;
+		addFallStats(lore, p);
+		addToggleHint(lore, breakdown);
+		return statsItem(Material.SUGAR_CANE, "<white>Misc Stats", lore);
+	}
+
+	private static List<Component> speedBreakdown(Player p) {
+		List<Component> out = new ArrayList<>();
+		AttributeInstance attr = p.getAttribute(Attribute.MOVEMENT_SPEED);
+		if(attr == null || attr.getBaseValue() == 0) return out;
+		double base = attr.getBaseValue();
+		double withFlat = base;
+		for(AttributeModifier mod : attr.getModifiers()) {
+			if(counts(mod, AttributeModifier.Operation.ADD_NUMBER)) withFlat += mod.getAmount();
+		}
+		Map<NamespacedKey, Component> sources = itemSources(p, Attribute.MOVEMENT_SPEED);
+		out.add(breakdownLine(Component.text("Base"), "+", 100, "white"));
+		for(AttributeModifier mod : attr.getModifiers()) {
+			if(IGNORED_SPEED_MODIFIERS.contains(mod.getKey())) continue;
+			Component label = modifierLabel(p, mod.getKey(), sources);
+			double amount = mod.getAmount();
+			String sign = amount < 0 ? "-" : "+";
+			out.add(switch(mod.getOperation()) {
+				case ADD_NUMBER -> breakdownLine(label, sign, Math.abs(amount) / base * 100, "white");
+				case ADD_SCALAR -> breakdownLine(label, sign, Math.abs(amount) * withFlat / base * 100, "white");
+				case MULTIPLY_SCALAR_1 -> breakdownLine(label, "x", 1 + amount, "white");
+			});
+		}
+		return out;
+	}
+
+	private static void addFallStats(List<Component> lore, Player p) {
+		AttributeInstance safeAttr = p.getAttribute(Attribute.SAFE_FALL_DISTANCE);
+		double safe = safeAttr == null ? 3 : safeAttr.getValue();
+		AttributeInstance fallAttr = p.getAttribute(Attribute.FALL_DAMAGE_MULTIPLIER);
+		double fallMultiplier = fallAttr == null ? 1 : Math.max(0, fallAttr.getValue());
+
+		List<Component> sources = new ArrayList<>();
+		if(safeAttr != null) {
+			Map<NamespacedKey, Component> items = itemSources(p, Attribute.SAFE_FALL_DISTANCE);
+			for(AttributeModifier mod : safeAttr.getModifiers()) {
+				double amount = mod.getOperation() == AttributeModifier.Operation.ADD_NUMBER ? mod.getAmount()
+						: safeAttr.getBaseValue() * mod.getAmount();
+				sources.add(Component.empty().color(net.kyori.adventure.text.format.NamedTextColor.GRAY)
+						.decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false)
+						.append(modifierLabel(p, mod.getKey(), items)).append(Component.text(": "))
+						.append(Utils.mm((amount >= 0 ? "<green>+" : "<red>-") + Utils.damageNumber(Math.abs(amount)) + " safe blocks")));
+			}
+		}
+		if(fallAttr != null) {
+			Map<NamespacedKey, Component> items = itemSources(p, Attribute.FALL_DAMAGE_MULTIPLIER);
+			for(AttributeModifier mod : fallAttr.getModifiers()) {
+				double m = mod.getOperation() == AttributeModifier.Operation.MULTIPLY_SCALAR_1 ? 1 + mod.getAmount()
+						: 1 + fallAttr.getBaseValue() * mod.getAmount();
+				sources.add(Component.empty().color(net.kyori.adventure.text.format.NamedTextColor.GRAY)
+						.decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false)
+						.append(modifierLabel(p, mod.getKey(), items)).append(Component.text(": "))
+						.append(Utils.mm((m > 1 ? "<red>+" : "<green>-") + Utils.percent(Math.abs(m - 1)))));
+			}
+		}
+		int featherFalling = CustomDamage.featherFallingLevel(p);
+		if(featherFalling > 0) {
+			sources.add(modifierLine("Feather Falling (" + featherFalling + ")",
+					1 - featherFalling * CustomDamage.FEATHER_FALLING_PER_LEVEL, false));
+		}
+		double taken = CustomDamage.featherFallingMultiplier(p) * takenModifiers(p, sources);
+
+		boolean immune = fallMultiplier <= 0 || taken <= 0;
+		double total = fallMultiplier * taken;
+		lore.add(Component.empty());
+		lore.add(Utils.mm("<gray>Fall Damage Reduction: " + (immune ? "<green>Immune"
+				: total <= 1 ? "<green>-" + Utils.percent(1 - total) : "<red>+" + Utils.percent(total - 1))));
+		lore.addAll(sources);
+		if(immune) {
+			lore.add(Utils.mm("<gray>Max Safe Fall: <green>Unlimited"));
+			return;
+		}
+		AttributeInstance maxHealth = p.getAttribute(Attribute.MAX_HEALTH);
+		double health = maxHealth == null ? 20 : maxHealth.getValue();
+		long survivable = (long) Math.ceil(health / taken + CustomDamage.FALL_FLAT_REDUCTION - 1);
+		while(survivable > 0 && (survivable - CustomDamage.FALL_FLAT_REDUCTION) * taken >= health) survivable--;
+		while((survivable + 1 - CustomDamage.FALL_FLAT_REDUCTION) * taken < health) survivable++;
+		double limit = safe + (survivable + 1) / fallMultiplier;
+		long blocks = (long) Math.ceil(limit) - 1;
+		lore.add(Utils.mm("<gray>Max Safe Fall: <green>" + blocks + " blocks"));
 	}
 
 	/** 100 = vanilla, sprinting excluded. */
@@ -394,9 +512,11 @@ public class Eq implements CommandExecutor, Listener {
 		if(!(e.getWhoClicked() instanceof Player p)) return;
 		Inventory clicked = e.getClickedInventory();
 		Inventory top = e.getView().getTopInventory();
-		if(clicked != null && clicked.equals(top) && (e.getSlot() == OFFENSE_SLOT || e.getSlot() == DEFENSE_SLOT)) {
-			if(!showBreakdown.remove(p.getUniqueId())) showBreakdown.add(p.getUniqueId());
+		if(clicked != null && clicked.equals(top) && (e.getSlot() == OFFENSE_SLOT || e.getSlot() == DEFENSE_SLOT || e.getSlot() == SPEED_SLOT)) {
+			Set<UUID> toggle = e.getSlot() == OFFENSE_SLOT && e.isRightClick() ? showCrit : showBreakdown;
+			if(!toggle.remove(p.getUniqueId())) toggle.add(p.getUniqueId());
 			refreshStats(p, top);
+			applySpeedCane(p);
 			return;
 		}
 		if(clicked == null || !clicked.equals(p.getInventory())) return; // only bottom-inventory clicks act

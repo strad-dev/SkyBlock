@@ -12,10 +12,26 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
+import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.util.Vector;
 
 public class ArrowMechanicsHandler implements Listener {
+	private static final int FULL_HIT_MARGIN_AGE = 8;
+
+	public static void fullHitMargin(AbstractArrow arrow) {
+		if(arrow.getTicksLived() < FULL_HIT_MARGIN_AGE) {
+			arrow.setTicksLived(FULL_HIT_MARGIN_AGE);
+		}
+	}
+
+	@EventHandler(ignoreCancelled = true)
+	public void onShootBow(EntityShootBowEvent e) {
+		if(e.getEntity() instanceof Player && e.getProjectile() instanceof AbstractArrow arrow) {
+			fullHitMargin(arrow);
+		}
+	}
+
 	@EventHandler
 	public void onEntityExplode(EntityExplodeEvent e) {
 		if(e.getEntity() instanceof WindCharge windCharge && windCharge.getScoreboardTags().contains("Bonzo")) {

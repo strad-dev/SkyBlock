@@ -4,6 +4,10 @@ chat:
   # Enables a lightweight custom chat that bypasses Mojang chat reporting
   enabled: true
 
+damage-numbers:
+  # Enables SkyBlock-style damage numbers when you hit a mob
+  enabled: true
+
 manhunt:
   # Enables Minecraft Manhunt
   # When a manhunt is active, the following changes are made to the game/plugin:

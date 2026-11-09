@@ -60,7 +60,16 @@ public class Plugin extends JavaPlugin implements Listener {
 		} else {
 			getLogger().warning("minecraft:armor is not a RangedAttribute; armor will clamp at 30.");
 		}
+		try {
+			java.lang.reflect.Field interval = net.minecraft.world.entity.EntityType.class.getDeclaredField("updateInterval");
+			interval.setAccessible(true);
+			interval.setInt(net.minecraft.world.entity.EntityTypes.WITHER, WITHER_UPDATE_INTERVAL);
+		} catch(ReflectiveOperationException | RuntimeException e) {
+			getLogger().warning("Could not set the wither's tracker interval; withers sync every 3 ticks: " + e);
+		}
 	}
+
+	private static final int WITHER_UPDATE_INTERVAL = 1;
 
 	@Override
 	public void onEnable() {
@@ -69,6 +78,7 @@ public class Plugin extends JavaPlugin implements Listener {
 		// PvP + chat config. Chat disabled (strad.dev network) = the hub owns chat, so we skip our chat commands/listeners.
 		pvp.PvpConfig pvpCfg = new pvp.PvpConfig(this);
 		boolean chatEnabled = pvpCfg.chatEnabled();
+		DamageNumbers.setEnabled(getConfig().getBoolean("damage-numbers.enabled", true));
 
 		Objects.requireNonNull(this.getCommand("getopitems")).setExecutor(new GetOPItems());
 		Eq eq = new Eq();
@@ -396,6 +406,7 @@ public class Plugin extends JavaPlugin implements Listener {
 	public void onDisable() {
 		pvp.PvpModule.disable(); // hands back the inventory of anyone inside the PvP loadout editor
 		ArmorBar.uninstallAll();
+		DamageNumbers.removeAll();
 		getLogger().info("Stopped SkyBlock in Vanilla!");
 	}
 

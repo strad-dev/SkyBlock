@@ -51,7 +51,7 @@ public class Goldor implements CustomWither {
 
 	private void damageAll(Wither wither) {
 		if(!wither.isDead() && !wither.getScoreboardTags().contains("Dead")) {
-			Utils.spawnTNT(wither, wither.getLocation(), 0, 6, Math.min(25, 5 + (int) Math.floor((1200.0 - wither.getHealth()) / 50.0)), new ArrayList<>());
+			Utils.spawnTNT(wither, wither.getLocation(), 0, 6, Math.min(30, 15 + (int) Math.floor((1200.0 - wither.getHealth()) / 60.0)), new ArrayList<>());
 			Utils.scheduleTask(() -> damageAll(wither), 20);
 		}
 	}
@@ -85,7 +85,7 @@ public class Goldor implements CustomWither {
 			Utils.scheduleTask(() -> {
 				Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
 				Bukkit.broadcast(Utils.msg(name + "<red><bold>: Either way I don't think you're getting past Necron."));
-			}, 60);
+			}, 40);
 			Utils.scheduleTask(() -> {
 				Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
 				Bukkit.broadcast(Utils.msg("<gold><bold>﴾ <red><bold>Necron<gold><bold> ﴿<red><bold>: I have heard a lot about you."));
