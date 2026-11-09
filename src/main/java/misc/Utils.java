@@ -468,6 +468,12 @@ public class Utils {
 		}
 	}
 
+	public static Component stripHealth(Component name) {
+		String serialized = LEGACY.serialize(name);
+		String bare = serialized.replaceFirst("\\s*(§.)*❤.*$", "");
+		return bare.length() == serialized.length() ? name : LEGACY.deserialize(bare);
+	}
+
 	/**
 	 * Sets the entity's custom name to the given base name with health appended.
 	 *

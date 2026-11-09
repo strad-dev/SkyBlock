@@ -74,6 +74,36 @@ public class CustomDamage implements Listener {
 	private static final Map<Entity, DragonExplosion> lastDragonExplosion = new WeakHashMap<>();
 	private static final float BED_EXPLOSION_RADIUS = 5.0F;
 
+	// Melee i-frames, one timer per attacking player; every non-player attacker shares one.
+	private static final int IFRAME_TICKS = 9;
+	private static final UUID SHARED_IFRAMES = new UUID(0, 0);
+	private static final Map<Entity, Map<UUID, Integer>> iFramesUntil = new WeakHashMap<>();
+
+	private static UUID iFrameKey(Entity damager) {
+		if(damager instanceof Player p) return p.getUniqueId();
+		if(damager instanceof Projectile projectile && projectile.getShooter() instanceof Player p) return p.getUniqueId();
+		return SHARED_IFRAMES;
+	}
+
+	public static boolean inIFrames(Entity damagee, Entity damager) {
+		Map<UUID, Integer> timers = iFramesUntil.get(damagee);
+		if(timers == null) return false;
+		Integer until = timers.get(iFrameKey(damager));
+		return until != null && Bukkit.getCurrentTick() < until;
+	}
+
+	public static void setIFrames(Entity damagee, Entity damager) {
+		int now = Bukkit.getCurrentTick();
+		Map<UUID, Integer> timers = iFramesUntil.computeIfAbsent(damagee, k -> new HashMap<>());
+		timers.values().removeIf(until -> until <= now);
+		timers.put(iFrameKey(damager), now + IFRAME_TICKS);
+	}
+
+	public static void clearIFrames(Entity damagee, Entity damager) {
+		Map<UUID, Integer> timers = iFramesUntil.get(damagee);
+		if(timers != null) timers.remove(iFrameKey(damager));
+	}
+
 	// Stamped on a dragon when its death branch runs; the only way to tell a corpse from a live one. Vanilla animates
 	// death at 1 HP (EnderDragon.handleKillingBlow), so isDead() and getHealth() read alive for all 200 ticks.
 	public static final String DYING_DRAGON_TAG = "DyingDragon";
@@ -646,6 +676,17 @@ public class CustomDamage implements Listener {
 		}
 	}
 
+	// The cancelled event never reaches the CombatTracker, so a tamed pet's death message to its owner read "Wolf died".
+	private static void recordKillingBlow(LivingEntity damagee, Entity damager, DamageData data, double amount) {
+		net.minecraft.world.entity.LivingEntity nms = ((CraftLivingEntity) damagee).getHandle();
+		DamageSource source;
+		if(data.e != null) source = convertBukkitDamageSource(data.e.getDamageSource(), damagee);
+		else if(damager instanceof Player p) source = nms.damageSources().playerAttack(((CraftPlayer) p).getHandle());
+		else if(damager instanceof LivingEntity le) source = nms.damageSources().mobAttack(((CraftLivingEntity) le).getHandle());
+		else source = nms.damageSources().generic();
+		nms.getCombatTracker().recordDamage(source, (float) amount);
+	}
+
 	// A curled armadillo's 0 is still a HIT in vanilla (Armadillo.hurtServer cuts to (d - 1) / 2, the event still
 	// fires): hurt animation, its reduced hurt sound, onMobHurt. dealDamage drops every other 0.
 	private static boolean curledArmadillo(LivingEntity e) {
@@ -727,7 +768,7 @@ public class CustomDamage implements Listener {
 	}
 
 	private static void dealDamage(LivingEntity damagee, Entity damager, double finalDamage, DamageType type, DamageData data) {
-		if((!damagee.isDead() || data.feedbackOnly) && (finalDamage > 0 || type == DamageType.RANGED || type == DamageType.RANGED_SPECIAL || curledArmadillo(damagee)) && (damagee.getNoDamageTicks() == 0 || type == DamageType.RANGED || type == DamageType.RANGED_SPECIAL || type == DamageType.MAGIC || type == DamageType.PLAYER_MAGIC || type == DamageType.ABSOLUTE || type == DamageType.LETHAL_ABSOLUTE)) {
+		if((!damagee.isDead() || data.feedbackOnly) && (finalDamage > 0 || type == DamageType.RANGED || type == DamageType.RANGED_SPECIAL || curledArmadillo(damagee)) && (!inIFrames(damagee, damager) || type == DamageType.RANGED || type == DamageType.RANGED_SPECIAL || type == DamageType.MAGIC || type == DamageType.PLAYER_MAGIC || type == DamageType.ABSOLUTE || type == DamageType.LETHAL_ABSOLUTE)) {
 			// sweeping edge
 			if(type == DamageType.MELEE && damager instanceof LivingEntity temp && temp.getEquipment().getItemInMainHand().containsEnchantment(Enchantment.SWEEPING_EDGE)) {
 				int level = temp.getEquipment().getItemInMainHand().getEnchantmentLevel(Enchantment.SWEEPING_EDGE);
@@ -776,7 +817,7 @@ public class CustomDamage implements Listener {
 			pvp.PvpHooks.trackHit(damagee, damager, finalDamage,
 					type == DamageType.RANGED || type == DamageType.RANGED_SPECIAL,
 					data.isCrit, // decided once at the damage event, already in finalDamage
-					damagee.getNoDamageTicks() > 0); // landed during the victim's i-frames
+					inIFrames(damagee, damager)); // landed during the victim's i-frames
 
 			// Intelligence for a melee hit. Granted here, at the end of the pipeline, so a swing that deals nothing
 			// (soaked to 0, blocked, i-framed, PvP-suppressed) pays nothing. Any living target pays, except in a
@@ -1101,6 +1142,8 @@ public class CustomDamage implements Listener {
 										case ABSOLUTE, LETHAL_ABSOLUTE -> who.append(net.kyori.adventure.text.Component.text(" fell out of the world"));
 									};
 								}
+							} else {
+								recordKillingBlow(damagee, damager, data, finalDamage);
 							}
 							replayHurtEffects(damagee, data, finalDamage);
 							damagee.setHealth(0.0);
@@ -1122,7 +1165,7 @@ public class CustomDamage implements Listener {
 				replayHurtEffects(damagee, data, finalDamage);
 				armadilloReaction(damagee, damager, data);
 				if(type == DamageType.MELEE || type == DamageType.MELEE_SWEEP || type == DamageType.IFRAME_ENVIRONMENTAL) {
-					damagee.setNoDamageTicks(9);
+					setIFrames(damagee, damager);
 				}
 
 				if(damagee instanceof Mob && damager instanceof LivingEntity) {
@@ -1801,7 +1844,7 @@ public class CustomDamage implements Listener {
 				// either: no hit stat, no intelligence. Always false off pvp / with PvP disabled.
 				boolean pvpBlocked = pvp.PvpHooks.shouldBlock(entity, e.getDamager());
 
-				if(entity.getNoDamageTicks() == 0 || e.getDamager() instanceof AbstractArrow) {
+				if(!inIFrames(entity, e.getDamager()) || e.getDamager() instanceof AbstractArrow) {
 					Entity damager = e.getDamager();
 					uncurl(entity, e);
 

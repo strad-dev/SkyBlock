@@ -1,11 +1,15 @@
 package listeners;
 
+import io.papermc.paper.event.entity.TameableDeathMessageEvent;
 import misc.Plugin;
 import misc.Utils;
 import mobs.enderDragons.CustomDragon;
 import mobs.hardmode.enderDragons.PrimalDragon;
 import mobs.hardmode.withers.Maxor;
 import mobs.withers.CustomWither;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TranslatableComponent;
+import net.kyori.adventure.text.TranslationArgument;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
@@ -21,6 +25,7 @@ import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffectType;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class CustomMobs implements Listener {
@@ -28,6 +33,17 @@ public class CustomMobs implements Listener {
 
 	public static void updateWitherLordFight(boolean isWitherLordFightActive) {
 		CustomMobs.isWitherLordFightActive = isWitherLordFightActive;
+	}
+
+	// "Wolf ❤ 14/40 was slain by ...": the HP tag is still on the name when the owner's message is built.
+	@EventHandler
+	public void onPetDeathMessage(TameableDeathMessageEvent e) {
+		if(!(e.deathMessage() instanceof TranslatableComponent msg)) return;
+		List<Component> args = new ArrayList<>();
+		for(TranslationArgument arg : msg.arguments()) {
+			args.add(arg.value() instanceof Component c ? Utils.stripHealth(c) : arg.asComponent());
+		}
+		e.deathMessage(msg.arguments(args));
 	}
 
 	/**

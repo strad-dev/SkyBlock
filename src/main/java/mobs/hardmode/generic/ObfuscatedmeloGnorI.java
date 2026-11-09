@@ -67,7 +67,7 @@ public class ObfuscatedmeloGnorI implements CustomMob {
 						damager.sendMessage(Utils.msg("<red><bold>You have done too much damage to the meloG norI!\nIt has HEALED ITSELF by " + (originalDamage - 10) + " HP!"));
 					}
 					damagee.getWorld().playSound(damagee, Sound.BLOCK_ANVIL_PLACE, 0.5F, 0.5F);
-					damagee.setNoDamageTicks(9);
+					CustomDamage.setIFrames(damagee, damager);
 					return false;
 				} else {
 					Random random = new Random();
