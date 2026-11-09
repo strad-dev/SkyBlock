@@ -28,7 +28,9 @@ public class TerminatorArrow extends Arrow {
 		Vec3 motion = getDeltaMovement();
 		float yaw = getYRot();
 		float pitch = getXRot();
+		setCritArrow(true);
 		super.onHitEntity(hit);
+		setCritArrow(false);
 		if(isRemoved()) return;
 		setDeltaMovement(motion);
 		setYRot(yaw);

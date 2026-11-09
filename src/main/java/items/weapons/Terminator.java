@@ -189,7 +189,6 @@ public class Terminator implements AbilityItem {
 			arrow.setShooter(p);
 			arrow.setWeapon(p.getInventory().getItemInMainHand());
 			arrow.addScoreboardTag("TerminatorArrow");
-			arrow.setCritical(true);
 			listeners.ArrowMechanicsHandler.fullHitMargin(arrow);
 		}
 
