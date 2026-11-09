@@ -43,7 +43,7 @@ public class PvpConfig {
 		// Settle which sections are new BEFORE writing: copying a leaf creates its parents.
 		List<String> newSections = new java.util.ArrayList<>();
 		for (String key : bundled.getKeys(true)) {
-			if (bundled.isConfigurationSection(key) && !live.contains(key)) newSections.add(key);
+			if (bundled.isConfigurationSection(key) && !live.contains(key, true)) newSections.add(key);
 		}
 
 		boolean changed = false;
@@ -60,7 +60,7 @@ public class PvpConfig {
 		}
 		for (String key : bundled.getKeys(true)) {
 			// Leaves only; sections come with their children.
-			if (!bundled.isConfigurationSection(key) && !live.contains(key)) {
+			if (!bundled.isConfigurationSection(key) && !live.contains(key, true)) {
 				live.set(key, bundled.get(key));
 				copyComments(bundled, live, key);
 				changed = true;
@@ -68,7 +68,7 @@ public class PvpConfig {
 		}
 		// Section headers last: the path exists only once its children are written.
 		for (String key : newSections) {
-			if (live.contains(key)) copyComments(bundled, live, key);
+			if (live.contains(key, true)) copyComments(bundled, live, key);
 		}
 
 		if (changed) plugin.saveConfig();

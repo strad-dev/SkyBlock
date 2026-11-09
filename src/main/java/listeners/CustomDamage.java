@@ -508,7 +508,7 @@ public class CustomDamage implements Listener {
 			doContinue = false;
 		}
 
-		if(type == DamageType.LETHAL_ABSOLUTE || doContinue) {
+		if(type == DamageType.LETHAL_ABSOLUTE || doContinue || data.feedbackOnly) {
 			calculateFinalDamage(damagee, damager, originalDamage, type, data);
 		}
 	}
@@ -765,8 +765,8 @@ public class CustomDamage implements Listener {
 				if(dotColour != null) {
 					misc.DamageNumbers.show(damagee, finalDamage, dotColour, numberFor);
 				} else {
-					boolean critNumber = data.isCrit || damager instanceof AbstractArrow arrow
-							&& (arrow.isCritical() || arrow.getScoreboardTags().contains("TerminatorArrow"));
+					boolean critNumber = data.isCrit || data.e instanceof EntityDamageByEntityEvent byEntity
+							&& byEntity.getDamager() instanceof AbstractArrow arrow && arrow.isCritical();
 					misc.DamageNumbers.show(damagee, finalDamage, critNumber, numberFor);
 				}
 			}
@@ -929,6 +929,8 @@ public class CustomDamage implements Listener {
 					}
 				}
 			}
+
+			if(data.feedbackOnly) return;
 
 			// armor stand override
 			if(damagee instanceof ArmorStand) {

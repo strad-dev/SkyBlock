@@ -190,6 +190,7 @@ public class Storm implements CustomWither {
 			}
 			return false;
 		} else if(damagee.getScoreboardTags().contains("Survival2Trigger") && hp - originalDamage < 500) {
+			data.feedbackOnly = true;
 			damagee.setHealth(500.0);
 			Utils.changeName(damagee);
 			damagee.setAI(false);
@@ -199,7 +200,6 @@ public class Storm implements CustomWither {
 			teleport(damagee, 0, false);
 
 			Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
-			damager.getWorld().playSound(damager, Sound.ENTITY_WITHER_HURT, 1.0F, 1.0F);
 			Bukkit.broadcast(Utils.msg(name + "<red><bold>: You think you're funny?  Try surviving this!"));
 
 			spawnMoreGuards((Wither) damagee);
@@ -231,6 +231,7 @@ public class Storm implements CustomWither {
 			nmsWither.bossEvent.setProgress(nmsWither.getHealth() / 1000);
 			return false;
 		} else if(hp - originalDamage < 1) {
+			data.feedbackOnly = true;
 			damagee.addScoreboardTag("Invulnerable");
 			damagee.addScoreboardTag("Dead");
 			damagee.setHealth(1.0);
@@ -239,7 +240,6 @@ public class Storm implements CustomWither {
 			Utils.changeName(damagee);
 			WitherBoss nmsWither = ((CraftWither) damagee).getHandle();
 			nmsWither.bossEvent.setProgress(nmsWither.getHealth() / 1000);
-			damager.getWorld().playSound(damager, Sound.ENTITY_WITHER_HURT, 1.0F, 1.0F);
 			Bukkit.broadcast(Utils.msg(name + "<red><bold>: I knew I should have prepared better."));
 			Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
 			damagee.remove();

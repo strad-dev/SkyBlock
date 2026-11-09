@@ -266,7 +266,7 @@ public class WitherKing implements CustomWither {
 				}
 				damagee.getWorld().playSound(damagee, Sound.BLOCK_ANVIL_PLACE, 0.5F, 0.5F);
 			} else {
-				damager.getWorld().playSound(damager, Sound.ENTITY_WITHER_HURT, 1.0F, 1.0F);
+				data.feedbackOnly = true;
 			}
 			damagee.setHealth(minHealth);
 			Utils.changeName(damagee);
@@ -274,6 +274,7 @@ public class WitherKing implements CustomWither {
 			nmsWither.bossEvent.setProgress((float) (witherKing.getHealth() / 2000));
 			return false;
 		} else if(hp - originalDamage < 1) {
+			data.feedbackOnly = true;
 			damagee.addScoreboardTag("Invulnerable");
 			damagee.addScoreboardTag("Dead");
 			damagee.setHealth(1.0);

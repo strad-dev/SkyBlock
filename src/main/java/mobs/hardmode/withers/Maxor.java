@@ -136,16 +136,17 @@ public class Maxor implements CustomWither {
 			}
 			return false;
 		} else if(damagee.getScoreboardTags().contains("600Crystal") && hp - originalDamage < 600) {
+			data.feedbackOnly = true;
 			spawnCrystal((Wither) damagee, 600);
 			Utils.changeName(damagee);
-			damager.getWorld().playSound(damager, Sound.ENTITY_WITHER_HURT, 1.0F, 1.0F);
 			return false;
 		} else if(damagee.getScoreboardTags().contains("300Crystal") && hp - originalDamage < 300) {
+			data.feedbackOnly = true;
 			spawnCrystal((Wither) damagee, 300);
 			Utils.changeName(damagee);
-			damager.getWorld().playSound(damager, Sound.ENTITY_WITHER_HURT, 1.0F, 1.0F);
 			return false;
 		} else if(hp - originalDamage < 1) {
+			data.feedbackOnly = true;
 			damagee.addScoreboardTag("Invulnerable");
 			damagee.addScoreboardTag("Dead");
 			damagee.setHealth(1.0);
@@ -154,7 +155,6 @@ public class Maxor implements CustomWither {
 			Utils.changeName(damagee);
 			WitherBoss nmsWither = ((CraftWither) damagee).getHandle();
 			nmsWither.bossEvent.setProgress(nmsWither.getHealth() / 800);
-			damager.getWorld().playSound(damager, Sound.ENTITY_WITHER_HURT, 1.0F, 1.0F);
 			Bukkit.broadcast(Utils.msg(name + "<red><bold>: HOW DID YOU DEFEAT ME?!?!?!"));
 			Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
 			damagee.remove();

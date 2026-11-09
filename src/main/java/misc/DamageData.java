@@ -27,6 +27,7 @@ public class DamageData {
 	// originalDamage already has the 1.5x, and particles, sound and PvP stats must agree. Re-asking later
 	// wouldn't: the mace branch in dealDamage zeroes the fall distance it's built on.
 	public boolean isCrit = false;
+	public boolean feedbackOnly = false;
 	/** A pipeline-made explosion ({@code Utils.spawnTNT}), for Blast Protection; vanilla ones read their damage type. */
 	public boolean explosion = false;
 	/**

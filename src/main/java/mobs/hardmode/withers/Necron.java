@@ -106,16 +106,17 @@ public class Necron implements CustomWither {
 				damagee.getWorld().playSound(damagee, Sound.BLOCK_ANVIL_PLACE, 0.5F, 0.5F);
 			return false;
 		} else if(damagee.getScoreboardTags().contains("1100Frenzy") && hp - originalDamage < 1100) {
+			data.feedbackOnly = true;
 			frenzy((Wither) damagee, 1100);
 			Utils.changeName(damagee);
-			damager.getWorld().playSound(damager, Sound.ENTITY_WITHER_HURT, 1.0F, 1.0F);
 			return false;
 		} else if(damagee.getScoreboardTags().contains("300Frenzy") && hp - originalDamage < 300) {
+			data.feedbackOnly = true;
 			frenzy((Wither) damagee, 300);
 			Utils.changeName(damagee);
-			damager.getWorld().playSound(damager, Sound.ENTITY_WITHER_HURT, 1.0F, 1.0F);
 			return false;
 		} else if(hp - originalDamage < 1) {
+			data.feedbackOnly = true;
 			damagee.addScoreboardTag("Invulnerable");
 			damagee.addScoreboardTag("Dead");
 			damagee.setHealth(1.0);
@@ -124,7 +125,6 @@ public class Necron implements CustomWither {
 			Utils.changeName(damagee);
 			WitherBoss nmsWither = ((CraftWither) damagee).getHandle();
 			nmsWither.bossEvent.setProgress(nmsWither.getHealth() / 1400);
-			damager.getWorld().playSound(damager, Sound.ENTITY_WITHER_HURT, 1.0F, 1.0F);
 			Bukkit.broadcast(Utils.msg(name + "<red><bold>: You have destroyed us... but you have not destroyed our forefather."));
 			Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
 			damagee.remove();

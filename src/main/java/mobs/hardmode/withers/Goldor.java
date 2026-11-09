@@ -68,6 +68,7 @@ public class Goldor implements CustomWither {
 			Utils.changeName(damagee);
 			return false;
 		} else if(damagee.getHealth() - originalDamage < 1) {
+			data.feedbackOnly = true;
 			damagee.addScoreboardTag("Invulnerable");
 			damagee.addScoreboardTag("Dead");
 			damagee.setHealth(1.0);
@@ -76,7 +77,6 @@ public class Goldor implements CustomWither {
 			Utils.changeName(damagee);
 			WitherBoss nmsWither = ((CraftWither) damagee).getHandle();
 			nmsWither.bossEvent.setProgress(nmsWither.getHealth() / 1200);
-			damager.getWorld().playSound(damager, Sound.ENTITY_WITHER_HURT, 1.0F, 1.0F);
 			Bukkit.broadcast(Utils.msg(name + "<red><bold>: How did you break through my shield???"));
 			Utils.playGlobalSound(Sound.ENTITY_WITHER_AMBIENT);
 			damagee.remove();
