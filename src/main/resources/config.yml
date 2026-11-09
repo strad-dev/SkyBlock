@@ -5,7 +5,7 @@ chat:
   enabled: true
 
 damage-numbers:
-  # Enables SkyBlock-style damage numbers when you hit a mob
+  # Enables SkyBlock-style damage numbers when you hit a mob or another player
   enabled: true
 
 manhunt:

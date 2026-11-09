@@ -761,7 +761,7 @@ public class CustomDamage implements Listener {
 				numberFor = recentPlayerHit(damagee);
 				dotColour = DOT_COLOURS.get(data.e.getCause());
 			}
-			if(numberFor != null && damagee instanceof Mob) {
+			if(numberFor != null && (damagee instanceof Mob || damagee instanceof Player && !damagee.equals(numberFor))) {
 				if(dotColour != null) {
 					misc.DamageNumbers.show(damagee, finalDamage, dotColour, numberFor);
 				} else {

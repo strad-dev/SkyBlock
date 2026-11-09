@@ -53,6 +53,7 @@ public class CustomItems implements Listener {
 		doNotKill.add(EntityType.CHERRY_CHEST_BOAT);
 		doNotKill.add(EntityType.CHEST_MINECART);
 		doNotKill.add(EntityType.COMMAND_BLOCK_MINECART);
+		doNotKill.add(EntityType.COPPER_GOLEM);
 		doNotKill.add(EntityType.DARK_OAK_BOAT);
 		doNotKill.add(EntityType.DARK_OAK_CHEST_BOAT);
 		doNotKill.add(EntityType.DONKEY);
