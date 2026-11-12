@@ -162,6 +162,7 @@ public class CustomMobs implements Listener {
 					case EnderDragon dragon -> {
 						Player p = Utils.getNearestPlayer(e.getEntity(), 128);
 						Player hardModePlayer = getHardModePlayer(p, e);
+						dragon.getAttribute(Attribute.KNOCKBACK_RESISTANCE).setBaseValue(1.0);
 						if(hardModePlayer != null) {
 							hardModePlayer.removePotionEffect(PotionEffectType.BAD_OMEN);
 							name = new PrimalDragon().onSpawn(hardModePlayer, dragon);

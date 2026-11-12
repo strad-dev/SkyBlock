@@ -19,7 +19,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageSources;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.boss.enderdragon.phases.DragonDeathPhase;
 import net.minecraft.world.entity.boss.enderdragon.phases.DragonPhaseInstance;
 import net.minecraft.world.entity.boss.enderdragon.phases.EnderDragonPhase;
@@ -30,7 +29,6 @@ import net.minecraft.world.entity.projectile.hurtingprojectile.windcharge.Abstra
 import net.minecraft.world.entity.raid.Raids;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.BlocksAttacks;
-import net.minecraft.world.level.ServerExplosion;
 import net.minecraft.world.level.block.SculkSpreader;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.*;
@@ -68,11 +66,6 @@ public class CustomDamage implements Listener {
 
 	// Last tick each entity took Terminator knockback, so a same-tick volley of 3 arrows stacks instead of overwriting.
 	private static final Map<Entity, Integer> lastTermKnockbackTick = new WeakHashMap<>();
-
-	// An explosion hurts each dragon part it reaches, one damage event per part, but vanilla pushes the dragon once.
-	private record DragonExplosion(int tick, Vec3 center) {}
-	private static final Map<Entity, DragonExplosion> lastDragonExplosion = new WeakHashMap<>();
-	private static final float BED_EXPLOSION_RADIUS = 5.0F;
 
 	// Melee i-frames, one timer per attacking player; every non-player attacker shares one.
 	private static final int IFRAME_TICKS = 9;
@@ -195,6 +188,14 @@ public class CustomDamage implements Listener {
 	 * ticker. The fallback covers blows that never went through {@code Player.attack} (a boss, {@code /damage}), where
 	 * nothing was reset. An older snapshot is a different swing, so it is refused.
 	 */
+	private static Vector currentVelocity(Entity e) {
+		if(e instanceof Player p) {
+			Vec3 m = ((CraftPlayer) p).getHandle().getKnownMovement();
+			return new Vector(m.x, m.y, m.z);
+		}
+		return e.getVelocity();
+	}
+
 	private static float attackCharge(Player p) {
 		SwingCharge charge = swingCharges.get(p);
 		if(charge != null && charge.tick() == Bukkit.getCurrentTick()) return charge.scale();
@@ -804,11 +805,11 @@ public class CustomDamage implements Listener {
 			}
 			if(numberFor != null && (damagee instanceof Mob || damagee instanceof Player && !damagee.equals(numberFor))) {
 				if(dotColour != null) {
-					misc.DamageNumbers.show(damagee, finalDamage, dotColour, numberFor);
+					misc.DamageNumbers.show(damagee, finalDamage, dotColour, numberFor, damager);
 				} else {
 					boolean critNumber = data.isCrit || data.e instanceof EntityDamageByEntityEvent byEntity
 							&& byEntity.getDamager() instanceof AbstractArrow arrow && arrow.isCritical();
-					misc.DamageNumbers.show(damagee, finalDamage, critNumber, numberFor);
+					misc.DamageNumbers.show(damagee, finalDamage, critNumber, numberFor, damager);
 				}
 			}
 			commands.VanillaDamageCommand.record(damagee, finalDamage);
@@ -888,7 +889,8 @@ public class CustomDamage implements Listener {
 					double upwardVelocity = Math.min(0.5 + level * 0.5, 3.0);
 					ServerPlayer serverPlayer = ((CraftPlayer) p).getHandle();
 					serverPlayer.setOnGround(false);
-					p.setVelocity(new Vector(p.getVelocity().getX(), upwardVelocity, p.getVelocity().getZ()));
+					Vector current = currentVelocity(p);
+					p.setVelocity(new Vector(current.getX(), upwardVelocity, current.getZ()));
 
 					// Knockback nearby entities (radial burst)
 					double radius = 3.0 + level;
@@ -1185,56 +1187,8 @@ public class CustomDamage implements Listener {
 					armorStand.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, -1, 255, true, false));
 				}
 
-				// Vanilla dragon knockback, rebuilt since the cancelled event skips it: ServerExplosion's push for beds
-				// (zero- and one-cycling), LivingEntity's 0.4 for hits (EnderDragon.knockback ignores it while perched).
-				if(damagee instanceof EnderDragon dragon) {
-					net.minecraft.world.entity.boss.enderdragon.EnderDragon nmsDragon = ((CraftEnderDragon) dragon).getHandle();
-					if(data.e != null && data.e.getCause() == DamageCause.BLOCK_EXPLOSION) {
-						Location source = data.e.getDamageSource().getSourceLocation();
-						if(source != null) {
-							Vec3 center = new Vec3(source.getX(), source.getY(), source.getZ());
-							DragonExplosion explosion = new DragonExplosion(MinecraftServer.currentTick, center);
-							if(!explosion.equals(lastDragonExplosion.put(dragon, explosion))) {
-								double dist = Math.sqrt(nmsDragon.distanceToSqr(center)) / (BED_EXPLOSION_RADIUS * 2.0F);
-								if(dist <= 1.0) {
-									double power = (1.0 - dist) * ServerExplosion.getSeenPercent(center, nmsDragon) * (1.0 - nmsDragon.getAttributeValue(Attributes.EXPLOSION_KNOCKBACK_RESISTANCE));
-									nmsDragon.push(nmsDragon.getEyePosition().subtract(center).normalize().scale(power));
-								}
-							}
-						}
-						damager = Utils.getNearestPlayer(dragon, 16);
-					} else if((type == DamageType.MELEE || type == DamageType.MELEE_SWEEP || type == DamageType.RANGED) && damager != null && !data.isTermArrow) {
-						// Terminator arrows never push it: too strong at three arrows a shot.
-						Projectile projectile = data.e instanceof EntityDamageByEntityEvent ev && ev.getDamager() instanceof Projectile pr ? pr : null;
-						net.minecraft.world.entity.Entity attacker = ((CraftEntity) (projectile != null ? projectile : damager)).getHandle();
-						DamageSource kbSource = nmsDragon.damageSources().generic();
-						double xd, zd;
-						if(projectile != null) {
-							xd = -projectile.getVelocity().getX();
-							zd = -projectile.getVelocity().getZ();
-						} else {
-							Location from = data.sourcePosition != null ? data.sourcePosition : damager.getLocation();
-							xd = from.getX() - dragon.getX();
-							zd = from.getZ() - dragon.getZ();
-						}
-						nmsDragon.knockback(0.4, xd, zd, kbSource, (float) finalDamage, attacker, io.papermc.paper.event.entity.EntityKnockbackEvent.Cause.ENTITY_ATTACK);
-
-						// Player.causeExtraKnockback (Knockback enchant, sprint hit) and AbstractArrow.doKnockback (Punch).
-						if(type == DamageType.MELEE && damager instanceof Player p) {
-							double extra = (((CraftPlayer) p).getHandle().getAttributeValue(Attributes.ATTACK_KNOCKBACK) + p.getEquipment().getItemInMainHand().getEnchantmentLevel(Enchantment.KNOCKBACK)) / 2.0
-									+ (p.isSprinting() && attackCharge(p) > 0.9f ? 0.5 : 0.0);
-							if(extra > 0) {
-								double yaw = Math.toRadians(p.getYaw());
-								nmsDragon.knockback(extra, Math.sin(yaw), -Math.cos(yaw), kbSource, (float) finalDamage, attacker, io.papermc.paper.event.entity.EntityKnockbackEvent.Cause.ENTITY_ATTACK);
-							}
-						} else if(projectile != null && data.punchArrow > 0) {
-							Vector punch = projectile.getVelocity().setY(0);
-							if(punch.lengthSquared() > 0) {
-								punch.normalize().multiply(data.punchArrow * 0.6 * Math.max(0.0, 1.0 - nmsDragon.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE)));
-								nmsDragon.push(punch.getX(), 0.1, punch.getZ(), attacker);
-							}
-						}
-					}
+				if(damagee instanceof EnderDragon dragon && data.e != null && data.e.getCause() == DamageCause.BLOCK_EXPLOSION) {
+					damager = Utils.getNearestPlayer(dragon, 16);
 				} else if(isPhysicalHit && damager != null) {
 					// apply knockback
 					double antiKB = 1 - Objects.requireNonNull(damagee.getAttribute(Attribute.KNOCKBACK_RESISTANCE)).getValue();
@@ -1291,9 +1245,10 @@ public class CustomDamage implements Listener {
 						}
 
 						// Apply knockback
-						Vector oldVelocity = damagee.getVelocity();
+						boolean termStack = data.isTermArrow && Integer.valueOf(MinecraftServer.currentTick).equals(lastTermKnockbackTick.get(damagee));
+						Vector oldVelocity = termStack ? damagee.getVelocity() : currentVelocity(damagee);
 						Vector newVelocity;
-						if(data.isTermArrow && Integer.valueOf(MinecraftServer.currentTick).equals(lastTermKnockbackTick.get(damagee))) {
+						if(termStack) {
 							// Same-tick Terminator volley: stack horizontally so the three 1/3 hits add up, keeping one hit's pop.
 							newVelocity = new Vector(oldVelocity.getX() + knockbackDir.getX() * horizontal, (damagee.isOnGround() ? Math.max(oldVelocity.getY(), vertical) : oldVelocity.getY()), oldVelocity.getZ() + knockbackDir.getZ() * horizontal);
 						} else {

@@ -13,7 +13,9 @@ import net.minecraft.world.entity.boss.enderdragon.EnderDragonPart;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.Sound;
+import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.craftbukkit.entity.CraftEnderDragon;
 import org.bukkit.entity.*;
@@ -32,6 +34,7 @@ public class PrimalDragon implements CustomDragon {
 	private static final Random random = new Random();
 	private static final int PERCH_MAX_DAMAGE = 50;
 	private static final int SEARCH_RADIUS_SQUARED = 16384; // 128^2
+	private static final int TRICK_RADIUS_SQUARED = 250000; // 500^2
 	private static final double ZEALOT_HEIGHT = 2.9;        // enderman hitbox - fed to Utils.getNearestValidBlockYAt
 	private static double perchedDamageAccumulated = 0;
 
@@ -56,14 +59,13 @@ public class PrimalDragon implements CustomDragon {
 				0, // yaw
 				0  // pitch
 		);
-		PERCHED_TNT_RAIN_LOCATIONS[0] = new Location(dragon.getWorld(), 3.5, 62, 0.5);
-		PERCHED_TNT_RAIN_LOCATIONS[1] = new Location(dragon.getWorld(), 2.5, 62, 2.5);
-		PERCHED_TNT_RAIN_LOCATIONS[2] = new Location(dragon.getWorld(), 0.5, 62, 3.5);
-		PERCHED_TNT_RAIN_LOCATIONS[3] = new Location(dragon.getWorld(), -1.5, 62, 2.5);
-		PERCHED_TNT_RAIN_LOCATIONS[4] = new Location(dragon.getWorld(), -2.5, 62, 0.5);
-		PERCHED_TNT_RAIN_LOCATIONS[5] = new Location(dragon.getWorld(), -1.5, 62, -1.5);
-		PERCHED_TNT_RAIN_LOCATIONS[6] = new Location(dragon.getWorld(), 0.5, 62, -2.5);
-		PERCHED_TNT_RAIN_LOCATIONS[7] = new Location(dragon.getWorld(), 2.5, 62, -1.5);
+		double[][] perchedTntRainOffsets = {{3.5, 0.5}, {2.5, 2.5}, {0.5, 3.5}, {-1.5, 2.5}, {-2.5, 0.5}, {-1.5, -1.5}, {0.5, -2.5}, {2.5, -1.5}};
+		for(int i = 0; i < perchedTntRainOffsets.length; i++) {
+			Location l = new Location(dragon.getWorld(), perchedTntRainOffsets[i][0], 62, perchedTntRainOffsets[i][1]);
+			Integer bedrock = highestBedrockY(l);
+			if(bedrock != null) l.setY(bedrock + 1);
+			PERCHED_TNT_RAIN_LOCATIONS[i] = l;
+		}
 		dragon.setPhase(EnderDragon.Phase.HOVER);
 		dragon.getAttribute(Attribute.MAX_HEALTH).setBaseValue(1000.0);
 		dragon.setHealth(1000.0);
@@ -114,7 +116,7 @@ public class PrimalDragon implements CustomDragon {
 				if(!dragon.getScoreboardTags().contains("Dead")) {
 					p.showTitle(Title.title(Utils.msg("<red><bold>IMMUNE"), Utils.msg("<yellow>You cannot damage Primal Dragon!"), Title.Times.times(Duration.ZERO, Duration.ofMillis(20L * 50L), Duration.ZERO)));
 				}
-				dragon.getWorld().playSound(dragon, Sound.BLOCK_ANVIL_PLACE, 0.5F, 0.5F);
+				damager.getWorld().playSound(damager, Sound.BLOCK_ANVIL_PLACE, 0.5F, 0.5F);
 			}
 			return false;
 		} else if(dragon.getScoreboardTags().contains("800Trigger") && hp - actualDamage < 800) {
@@ -232,6 +234,14 @@ public class PrimalDragon implements CustomDragon {
 			ClientboundTeleportEntityPacket partPacket = ClientboundTeleportEntityPacket.teleport(part.getId(), NMS_FREEZE_LOCATION, Set.of(), false);
 			Utils.broadcastPacket(partPacket);
 		}
+	}
+
+	private static Integer highestBedrockY(Location l) {
+		World world = l.getWorld();
+		for(int y = world.getMaxHeight() - 1; y >= world.getMinHeight(); y--) {
+			if(world.getBlockAt(l.getBlockX(), y, l.getBlockZ()).getType() == Material.BEDROCK) return y;
+		}
+		return null;
 	}
 
 	private static void dialogue(String message) {
@@ -462,8 +472,12 @@ public class PrimalDragon implements CustomDragon {
 			spawnLoc.setY(spawnLoc.getY() + 10 + random.nextInt(6));
 			dragon.getWorld().spawnEntity(spawnLoc, EntityType.END_CRYSTAL);
 			dragon.setHealth(dragon.getHealth() + 10);
-			Bukkit.getOnlinePlayers().forEach(p2 -> p2.showTitle(Title.title(Utils.msg("<yellow><bold>IT'S A TRICK!"), Utils.msg("<red>?<gold>?<blue>?"), Title.Times.times(Duration.ZERO, Duration.ofMillis(40L * 50L), Duration.ZERO))));
-			Utils.playGlobalSound(Sound.ENTITY_ARROW_HIT_PLAYER, 1.0f, 0.5f);
+			for(Player p2 : Bukkit.getOnlinePlayers()) {
+				Location l = p2.getLocation();
+				if(p2.getWorld().getEnvironment() != World.Environment.THE_END || l.getX() * l.getX() + l.getZ() * l.getZ() > TRICK_RADIUS_SQUARED) continue;
+				p2.showTitle(Title.title(Utils.msg("<yellow><bold>IT'S A TRICK!"), Utils.msg("<red>?<gold>?<blue>?"), Title.Times.times(Duration.ZERO, Duration.ofMillis(40L * 50L), Duration.ZERO)));
+				p2.playSound(p2, Sound.ENTITY_ARROW_HIT_PLAYER, 1.0f, 0.5f);
+			}
 			Utils.changeName(dragon);
 			Utils.scheduleTask(() -> theFinalTrick(dragon), 600);
 		}

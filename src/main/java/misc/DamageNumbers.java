@@ -2,10 +2,10 @@ package misc;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.entity.Display;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.TextDisplay;
+import org.bukkit.entity.*;
+import org.bukkit.util.BoundingBox;
+import org.bukkit.util.RayTraceResult;
+import org.bukkit.util.Vector;
 
 import java.util.*;
 
@@ -14,6 +14,8 @@ public final class DamageNumbers {
 	private static final int MAX_PER_PLAYER = 100;
 	private static final double SPAWN_RADIUS = 1.0;
 	private static final int SPAWN_ATTEMPTS = 12;
+	private static final double PART_RAY_RANGE = 64;
+	private static final double PART_RAY_MARGIN = 0.3;
 	private static final String[] CRIT_CADENCE = {"<green>", "<gold>", "<red>", "<red>", "<gold>", "<green>",
 			"<green>", "<gold>", "<red>"};
 
@@ -38,13 +40,13 @@ public final class DamageNumbers {
 		LIVE.clear();
 	}
 
-	public static void show(LivingEntity target, double damage, boolean crit, Player attacker) {
-		show(target, damage, crit ? null : "<gray>", attacker);
+	public static void show(LivingEntity target, double damage, boolean crit, Player attacker, @javax.annotation.Nullable Entity hitBy) {
+		show(target, damage, crit ? null : "<gray>", attacker, hitBy);
 	}
 
-	public static void show(LivingEntity target, double damage, @javax.annotation.Nullable String colour, Player attacker) {
+	public static void show(LivingEntity target, double damage, @javax.annotation.Nullable String colour, Player attacker, @javax.annotation.Nullable Entity hitBy) {
 		if(!enabled || target == null || damage <= 0 || attacker == null) return;
-		Location at = spawnPoint(target);
+		Location at = spawnPoint(target, hitBy);
 
 		Deque<TextDisplay> q = LIVE.computeIfAbsent(attacker.getUniqueId(), k -> new ArrayDeque<>());
 		while(q.size() >= MAX_PER_PLAYER) {
@@ -69,8 +71,8 @@ public final class DamageNumbers {
 		}, LIFETIME_TICKS);
 	}
 
-	private static Location spawnPoint(LivingEntity target) {
-		Location eyes = target.getEyeLocation();
+	private static Location spawnPoint(LivingEntity target, @javax.annotation.Nullable Entity hitBy) {
+		Location eyes = centre(target, hitBy);
 		for(int i = 0; i < SPAWN_ATTEMPTS; i++) {
 			double theta = RANDOM.nextDouble() * Math.PI * 2;
 			double y = RANDOM.nextDouble() * 2 - 1;
@@ -80,6 +82,47 @@ public final class DamageNumbers {
 			if(at.getBlock().isPassable()) return at;
 		}
 		return eyes;
+	}
+
+	private static Location centre(LivingEntity target, @javax.annotation.Nullable Entity hitBy) {
+		if(!(target instanceof ComplexLivingEntity complex) || hitBy == null) return target.getEyeLocation();
+		Vector origin;
+		Vector direction;
+		if(hitBy instanceof LivingEntity living) {
+			origin = living.getEyeLocation().toVector();
+			direction = living.getEyeLocation().getDirection();
+		} else {
+			origin = hitBy.getLocation().toVector();
+			direction = hitBy.getVelocity();
+		}
+		BoundingBox best = null;
+		double bestDistance = Double.MAX_VALUE;
+		if(direction.lengthSquared() > 1.0E-6) {
+			for(ComplexEntityPart part : complex.getParts()) {
+				BoundingBox box = part.getBoundingBox().expand(PART_RAY_MARGIN);
+				RayTraceResult hit = box.rayTrace(origin, direction, PART_RAY_RANGE);
+				if(hit == null) continue;
+				double d = hit.getHitPosition().distanceSquared(origin);
+				if(d < bestDistance) {
+					bestDistance = d;
+					best = part.getBoundingBox();
+				}
+			}
+		}
+		if(best == null) {
+			for(ComplexEntityPart part : complex.getParts()) {
+				BoundingBox box = part.getBoundingBox();
+				Vector closest = new Vector(Math.clamp(origin.getX(), box.getMinX(), box.getMaxX()),
+						Math.clamp(origin.getY(), box.getMinY(), box.getMaxY()),
+						Math.clamp(origin.getZ(), box.getMinZ(), box.getMaxZ()));
+				double d = closest.distanceSquared(origin);
+				if(d < bestDistance) {
+					bestDistance = d;
+					best = box;
+				}
+			}
+		}
+		return best == null ? target.getEyeLocation() : best.getCenter().toLocation(target.getWorld());
 	}
 
 	private static String format(double damage, @javax.annotation.Nullable String colour) {
