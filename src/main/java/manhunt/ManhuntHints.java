@@ -1,11 +1,11 @@
 package manhunt;
 
+import manhunt.structures.LiveWorld;
 import manhunt.structures.LootRule;
 import manhunt.structures.StructureFinder;
 import misc.Plugin;
 import misc.Utils;
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -40,12 +40,12 @@ public final class ManhuntHints {
 		if(level == Level.OFF) return;
 		for(Player p : Manhunt.onlineSpeedrunners()) {
 			Location at = p.getLocation();
-			ServerLevel world = ((CraftWorld) at.getWorld()).getHandle();
-			search(p, at, new StructureFinder(world, at.getX(), at.getZ(), Double.MAX_VALUE));
+			LiveWorld world = new LiveWorld(((CraftWorld) at.getWorld()).getHandle());
+			search(p, at, world, new StructureFinder(world, at.getX(), at.getZ(), Double.MAX_VALUE));
 		}
 	}
 
-	private static void search(Player p, Location at, StructureFinder finder) {
+	private static void search(Player p, Location at, LiveWorld live, StructureFinder finder) {
 		if(!p.isOnline()) return;
 		StructureFinder.Found found = finder.next();
 		if(found == null) return;
@@ -59,10 +59,10 @@ public final class ManhuntHints {
 				.map(chunk -> world.getChunkAtAsync(chunk.x(), chunk.z()))
 				.toArray(CompletableFuture[]::new);
 		CompletableFuture.allOf(loads).whenComplete((done, error) -> Bukkit.getScheduler().runTask(Plugin.getInstance(), () -> {
-			if(rule.match(((CraftWorld) world).getHandle(), found.start()) != null) {
+			if(live.match(rule, found.start()) != null) {
 				tell(p, at, found);
 			} else {
-				search(p, at, finder);
+				search(p, at, live, finder);
 			}
 		}));
 	}

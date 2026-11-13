@@ -6,19 +6,13 @@ import net.minecraft.core.HolderGetter;
 import net.minecraft.core.SectionPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.chunk.ChunkAccess;
-import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.chunk.ChunkGeneratorStructureState;
-import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.levelgen.Heightmap;
-import net.minecraft.world.level.levelgen.RandomState;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.BuiltinStructures;
 import net.minecraft.world.level.levelgen.structure.Structure;
-import net.minecraft.world.level.levelgen.structure.StructureCheckResult;
-import net.minecraft.world.level.levelgen.structure.StructurePiece;
+import net.minecraft.world.level.levelgen.structure.TemplateStructurePiece;
 import net.minecraft.world.level.levelgen.structure.StructureStart;
 import net.minecraft.world.level.levelgen.structure.placement.RandomSpreadStructurePlacement;
 import net.minecraft.world.level.levelgen.structure.placement.StructurePlacement;
@@ -34,8 +28,8 @@ public final class StructureFinder {
 	/** Same radius as /locate, in grid cells. */
 	public static final int SEARCH_RINGS = 100;
 
-	/** Share of footprint columns that must be open to the sky. */
-	private static final double MIN_EXPOSED = 0.25;
+	private static final int MIN_OCEAN_Y = 31;
+	private static final String SHIPWRECK = "Shipwreck";
 
 	public record Found(String type, BlockPos pos, double distance, StructureStart start) {}
 
@@ -43,7 +37,7 @@ public final class StructureFinder {
 
 	private record Cell(Grid grid, ChunkPos chunk, BlockPos pos, double distSq) {}
 
-	private final ServerLevel world;
+	private final StructureWorld world;
 	private final double x;
 	private final double z;
 	private final double maxDistSq;
@@ -54,14 +48,14 @@ public final class StructureFinder {
 	private final int[] next;
 	private final PriorityQueue<Cell> cells = new PriorityQueue<>(Comparator.comparingDouble(Cell::distSq));
 
-	public StructureFinder(ServerLevel world, double x, double z, double maxDistance) {
+	public StructureFinder(StructureWorld world, double x, double z, double maxDistance) {
 		this.world = world;
 		this.x = x;
 		this.z = z;
 		this.maxDistSq = maxDistance * maxDistance;
 		this.chunkX = SectionPos.blockToSectionCoord(x);
 		this.chunkZ = SectionPos.blockToSectionCoord(z);
-		ChunkGeneratorStructureState state = world.getChunkSource().getGeneratorState();
+		ChunkGeneratorStructureState state = world.structureState();
 		this.seed = state.getLevelSeed();
 		Map<RandomSpreadStructurePlacement, Map<Holder<Structure>, String>> byGrid = new LinkedHashMap<>();
 		for(Map.Entry<Holder<Structure>, String> entry : interest(world.registryAccess().lookupOrThrow(Registries.STRUCTURE)).entrySet()) {
@@ -98,8 +92,8 @@ public final class StructureFinder {
 			if(cell != null && (pick == -1 || cell.distSq() <= closest * closest)) {
 				cells.poll();
 				for(Map.Entry<Holder<Structure>, String> entry : cell.grid().structures().entrySet()) {
-					StructureStart start = startAt(entry.getKey().value(), cell.grid().spread(), cell.chunk());
-					if(start != null) return new Found(entry.getValue(), cell.pos(), Math.sqrt(cell.distSq()), start);
+					StructureStart start = world.startAt(entry.getKey().value(), cell.grid().spread(), cell.chunk());
+					if(start != null && reasonableHeight(entry.getValue(), start)) return new Found(entry.getValue(), cell.pos(), Math.sqrt(cell.distSq()), start);
 				}
 				continue;
 			}
@@ -125,35 +119,16 @@ public final class StructureFinder {
 		}
 	}
 
-	/** Vanilla's locate check (private there), plus {@link #exposed}. */
-	private StructureStart startAt(Structure structure, StructurePlacement placement, ChunkPos chunk) {
-		StructureCheckResult result = world.structureManager().checkStructurePresence(chunk, structure, placement, false);
-		if(result == StructureCheckResult.START_NOT_PRESENT) return null;
-		ChunkAccess access = world.getChunk(chunk.x(), chunk.z(), ChunkStatus.STRUCTURE_STARTS);
-		StructureStart start = world.structureManager().getStartForStructure(SectionPos.bottomOf(access), structure, access);
-		return start != null && start.isValid() && exposed(start) ? start : null;
-	}
-
-	/** Enough of the footprint reaches the predicted surface. Water counts as sky; trees don't exist yet. */
-	private boolean exposed(StructureStart start) {
-		ChunkGenerator generator = world.getChunkSource().getGenerator();
-		RandomState random = world.getChunkSource().randomState();
-		BoundingBox bounds = start.getBoundingBox();
-		int columns = 0;
-		int open = 0;
-		for(int bx = bounds.minX(); bx <= bounds.maxX(); bx += 4) {
-			for(int bz = bounds.minZ(); bz <= bounds.maxZ(); bz += 4) {
-				int top = Integer.MIN_VALUE;
-				for(StructurePiece piece : start.getPieces()) {
-					BoundingBox box = piece.getBoundingBox();
-					if(box.intersects(bx, bz, bx, bz)) top = Math.max(top, box.maxY());
-				}
-				if(top == Integer.MIN_VALUE) continue;
-				columns++;
-				if(top + 1 >= generator.getBaseHeight(bx, bz, Heightmap.Types.OCEAN_FLOOR_WG, world, random)) open++;
-			}
+	private boolean reasonableHeight(String type, StructureStart start) {
+		BoundingBox box = start.getBoundingBox();
+		if(type.equals(LootRule.RUINED_PORTAL.type)) return box.maxY() >= world.generator().getSeaLevel();
+		if(type.equals(SHIPWRECK)) return box.minY() >= MIN_OCEAN_Y;
+		if(type.equals(LootRule.OCEAN_RUIN.type) && start.getPieces().getFirst() instanceof TemplateStructurePiece ruin) {
+			BlockPos at = ruin.templatePosition();
+			return world.generator().getBaseHeight(at.getX(), at.getZ(), Heightmap.Types.OCEAN_FLOOR_WG, world.heightAccessor(),
+					world.randomState()) >= MIN_OCEAN_Y;
 		}
-		return columns > 0 && open >= columns * MIN_EXPOSED;
+		return true;
 	}
 
 	/** Structure to display name. The nether ruined portal is left out: it never generates in the overworld. */
@@ -165,7 +140,7 @@ public final class StructureFinder {
 		name(out, structures, LootRule.RUINED_PORTAL.type, BuiltinStructures.RUINED_PORTAL_STANDARD, BuiltinStructures.RUINED_PORTAL_DESERT,
 				BuiltinStructures.RUINED_PORTAL_JUNGLE, BuiltinStructures.RUINED_PORTAL_SWAMP, BuiltinStructures.RUINED_PORTAL_MOUNTAIN,
 				BuiltinStructures.RUINED_PORTAL_OCEAN);
-		name(out, structures, "Shipwreck", BuiltinStructures.SHIPWRECK, BuiltinStructures.SHIPWRECK_BEACHED);
+		name(out, structures, SHIPWRECK, BuiltinStructures.SHIPWRECK, BuiltinStructures.SHIPWRECK_BEACHED);
 		name(out, structures, LootRule.VILLAGE.type, BuiltinStructures.VILLAGE_PLAINS, BuiltinStructures.VILLAGE_DESERT,
 				BuiltinStructures.VILLAGE_SAVANNA, BuiltinStructures.VILLAGE_SNOWY, BuiltinStructures.VILLAGE_TAIGA);
 		return out;
