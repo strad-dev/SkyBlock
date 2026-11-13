@@ -4,6 +4,7 @@ import listeners.CustomDamage;
 import listeners.DamageType;
 import misc.BossBarManager;
 import misc.DamageData;
+import misc.Random;
 import misc.Utils;
 import mobs.CustomMob;
 import org.bukkit.Bukkit;
@@ -19,7 +20,6 @@ import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.Random;
 
 import static misc.Utils.shootBeam;
 
@@ -70,7 +70,7 @@ public class Sadan implements CustomMob {
 	@Override
 	public boolean whenDamaged(LivingEntity damagee, Entity damager, double originalDamage, DamageType type, DamageData data) {
 		if(!(damager instanceof FallingBlock)) {
-			Random random = new Random();
+			Random random = Random.of(damagee.getWorld());
 			if(damager instanceof LivingEntity entity && random.nextDouble() < 0.25) {
 				switch(random.nextInt(7)) {
 					case 0 -> {

@@ -1,13 +1,13 @@
 package mobs.withers;
 
+import misc.Random;
 import mobs.CustomMob;
+import org.bukkit.World;
 import org.bukkit.entity.WitherSkull;
 
-import java.util.Random;
-
 public interface CustomWither extends CustomMob {
-	static CustomWither spawnRandom() {
-		Random random = new Random();
+	static CustomWither spawnRandom(World world) {
+		Random random = Random.of(world);
 		switch(random.nextInt(4)) {
 			case 0 -> {
 				return new Maxor();

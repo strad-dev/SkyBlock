@@ -152,7 +152,7 @@ public class CustomMobs implements Listener {
 								}, 100);
 								Bukkit.getLogger().info("A player has initiated the Wither Lords fight!");
 							} else {
-								name = CustomWither.spawnRandom().onSpawn(p, wither);
+								name = CustomWither.spawnRandom(wither.getWorld()).onSpawn(p, wither);
 								Utils.setupBoss(wither, p);
 							}
 						} else {
@@ -167,7 +167,7 @@ public class CustomMobs implements Listener {
 							hardModePlayer.removePotionEffect(PotionEffectType.BAD_OMEN);
 							name = new PrimalDragon().onSpawn(hardModePlayer, dragon);
 						} else {
-							name = CustomDragon.spawnRandom().onSpawn(p, dragon);
+							name = CustomDragon.spawnRandom(dragon.getWorld()).onSpawn(p, dragon);
 							Utils.setupBoss(dragon, p);
 						}
 					}

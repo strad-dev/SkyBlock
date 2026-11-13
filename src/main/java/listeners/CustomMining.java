@@ -2,6 +2,7 @@ package listeners;
 
 import items.ingredients.mining.*;
 import misc.Plugin;
+import misc.Random;
 import misc.Utils;
 import mobs.hardmode.generic.VoidcrazedSeraph;
 import org.bukkit.*;
@@ -18,7 +19,6 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 import java.util.UUID;
 
 import static misc.Utils.sendRareDropMessage;
@@ -79,7 +79,7 @@ public class CustomMining implements Listener {
 		Location l = b.getLocation();
 		World world = l.getWorld();
 		ItemStack itemInHand = p.getInventory().getItemInMainHand();
-		Random random = new Random();
+		Random random = Random.of(world);
 		if(itemInHand.hasItemMeta() && itemInHand.getItemMeta().hasEnchant(Enchantment.FORTUNE)) {
 			boolean dropDouble = Utils.firstLorePlain(itemInHand).contains("skyblock/combat/divan_pickaxe");
 			int fortune = itemInHand.getItemMeta().getEnchantLevel(Enchantment.FORTUNE);

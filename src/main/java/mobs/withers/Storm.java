@@ -3,11 +3,11 @@ package mobs.withers;
 import listeners.CustomMobs;
 import listeners.DamageType;
 import misc.DamageData;
+import misc.Random;
 import misc.Utils;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.*;
 
-import java.util.Random;
 
 import static listeners.CustomMobs.spawnLightning;
 
@@ -41,7 +41,7 @@ public class Storm implements CustomWither {
 
 	@Override
 	public boolean whenDamaging(LivingEntity damagee, Entity damager, double originalDamage, DamageType type, DamageData data) {
-		Random random = new Random();
+		Random random = Random.of(damagee.getWorld());
 		if(random.nextBoolean()) {
 			CustomMobs.strike(damagee.getLocation(), LIGHTNING_DAMAGE);
 		}

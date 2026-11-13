@@ -3,6 +3,7 @@ package listeners;
 import items.ingredients.mining.Alloy;
 import items.ingredients.misc.EnchantmentUpgrader;
 import manhunt.Manhunt;
+import misc.Random;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Chest;
@@ -14,8 +15,6 @@ import org.bukkit.event.world.LootGenerateEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.EnchantmentStorageMeta;
-
-import java.util.Random;
 
 public class CustomChestLoot implements Listener {
 	@EventHandler
@@ -57,17 +56,10 @@ public class CustomChestLoot implements Listener {
 
 	private static Random seeded(Location location, long salt) {
 		long h = location.getWorld().getSeed();
-		h = mix(h ^ location.getWorld().getEnvironment().ordinal());
-		h = mix(h ^ location.getBlockX());
-		h = mix(h ^ location.getBlockY());
-		h = mix(h ^ location.getBlockZ());
-		return new Random(mix(h ^ salt));
-	}
-
-	private static long mix(long z) {
-		z += 0x9E3779B97F4A7C15L;
-		z = (z ^ (z >>> 30)) * 0xBF58476D1CE4E5B9L;
-		z = (z ^ (z >>> 27)) * 0x94D049BB133111EBL;
-		return z ^ (z >>> 31);
+		h = Random.mix(h ^ location.getWorld().getEnvironment().ordinal());
+		h = Random.mix(h ^ location.getBlockX());
+		h = Random.mix(h ^ location.getBlockY());
+		h = Random.mix(h ^ location.getBlockZ());
+		return new Random(Random.mix(h ^ salt));
 	}
 }

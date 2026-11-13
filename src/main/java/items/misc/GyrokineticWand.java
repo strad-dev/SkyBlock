@@ -2,6 +2,7 @@ package items.misc;
 
 import items.AbilityItem;
 import misc.Plugin;
+import misc.Random;
 import misc.SkyblockId;
 import misc.Utils;
 import net.kyori.adventure.text.Component;
@@ -107,7 +108,7 @@ public class GyrokineticWand implements AbilityItem {
 			y += 0.05; // Place falling block 0.05 above the air block
 			Location blockLoc = new Location(rift.getWorld(), x, Math.max(y, rift.getY()), z);
 
-			Material blockType = blockTypes[(int) (Math.random() * blockTypes.length)];
+			Material blockType = blockTypes[(int) (Random.of(rift.getWorld()).nextDouble() * blockTypes.length)];
 			FallingBlock block = rift.getWorld().spawn(blockLoc, FallingBlock.class, fb -> fb.setBlockData(blockType.createBlockData()));
 			block.setGravity(false);
 			block.setDropItem(false);
@@ -138,7 +139,7 @@ public class GyrokineticWand implements AbilityItem {
 						toRemove.add(block);
 
 						// Create a new block at the same location
-						Material blockType = blockTypes[(int) (Math.random() * blockTypes.length)];
+						Material blockType = blockTypes[(int) (Random.of(rift.getWorld()).nextDouble() * blockTypes.length)];
 						Location respawnLoc = block.getLocation().clone().add(0, 0.1, 0);
 
 						FallingBlock newBlock = respawnLoc.getWorld().spawn(respawnLoc, FallingBlock.class, fb -> fb.setBlockData(blockType.createBlockData()));
@@ -206,18 +207,18 @@ public class GyrokineticWand implements AbilityItem {
 					if(progress < 1.0) {
 						// Add constant wobble effect 
 						Vector wobble = new Vector(
-								(Math.random() - 0.5) * 4,
-								(Math.random() - 0.5) * 4,
-								(Math.random() - 0.5) * 4
+								(Random.of(rift.getWorld()).nextDouble() - 0.5) * 4,
+								(Random.of(rift.getWorld()).nextDouble() - 0.5) * 4,
+								(Random.of(rift.getWorld()).nextDouble() - 0.5) * 4
 						);
 
 						currentPos.add(wobble);
 					} else {
 						// Keep blocks at center with slight wobble
 						Vector wobble = new Vector(
-								(Math.random() - 0.5) * 2,
-								(Math.random() - 0.5) * 2,
-								(Math.random() - 0.5) * 2
+								(Random.of(rift.getWorld()).nextDouble() - 0.5) * 2,
+								(Random.of(rift.getWorld()).nextDouble() - 0.5) * 2,
+								(Random.of(rift.getWorld()).nextDouble() - 0.5) * 2
 						);
 						currentPos = rift.toVector().add(wobble);
 					}

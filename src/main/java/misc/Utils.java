@@ -37,7 +37,6 @@ import java.util.function.Consumer;
 import static listeners.CustomDamage.customMobs;
 
 public class Utils {
-	private static final Random random = new Random();
 	private static final MiniMessage MM = MiniMessage.miniMessage();
 	private static final PlainTextComponentSerializer PLAIN = PlainTextComponentSerializer.plainText();
 	private static final LegacyComponentSerializer LEGACY = LegacyComponentSerializer.legacySection();
@@ -808,6 +807,7 @@ public class Utils {
 
 	/** Randomizes X/Z within the radius, leaving Y alone. Never mutates the caller's Location. */
 	private static Location scatter(Location center, int radius) {
+		Random random = Random.of(center.getWorld());
 		Vector added = new Vector(random.nextInt(radius * 2 + 1) - radius, 0, random.nextInt(radius * 2 + 1) - radius);
 		return center.clone().add(added);
 	}
@@ -925,7 +925,7 @@ public class Utils {
 			if(!(user instanceof Player p) || (p.getGameMode() == GameMode.SURVIVAL || p.getGameMode() == GameMode.ADVENTURE)) {
 				double finalDamage = damage / (double) (d.getEnchantLevel(Enchantment.UNBREAKING) + 1);
 				int guaranteedDamage = (int) finalDamage;
-				if(finalDamage % 1 > random.nextDouble()) {
+				if(finalDamage % 1 > Random.of(user.getWorld()).nextDouble()) {
 					guaranteedDamage++;
 				}
 				int newDamage = d.getDamage() + guaranteedDamage;

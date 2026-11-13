@@ -3,14 +3,13 @@ package mobs.hardmode.generic;
 import listeners.CustomDamage;
 import listeners.DamageType;
 import misc.DamageData;
+import misc.Random;
 import misc.Utils;
 import mobs.CustomMob;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
-
-import java.util.Random;
 
 public class ZealotBrusier implements CustomMob {
 	@Override
@@ -37,7 +36,7 @@ public class ZealotBrusier implements CustomMob {
 
 	@Override
 	public boolean whenDamaged(LivingEntity damagee, Entity damager, double originalDamage, DamageType type, DamageData data) {
-		Random random = new Random();	
+		Random random = Random.of(damagee.getWorld());
 		if(damager instanceof LivingEntity entity1) {
 			if(random.nextDouble() < 0.2) {
 				damager.teleport(damagee);

@@ -4,6 +4,7 @@ import listeners.CustomDamage;
 import listeners.DamageType;
 import misc.DamageData;
 import misc.Plugin;
+import misc.Random;
 import misc.Utils;
 import mobs.enderDragons.CustomDragon;
 import net.kyori.adventure.title.Title;
@@ -23,7 +24,6 @@ import org.bukkit.util.Vector;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Random;
 import java.util.Set;
 
 public class PrimalDragon implements CustomDragon {
@@ -31,7 +31,6 @@ public class PrimalDragon implements CustomDragon {
 	private static Location FREEZE_LOCATION;
 	private static PositionMoveRotation NMS_FREEZE_LOCATION;
 	private static final Location[] PERCHED_TNT_RAIN_LOCATIONS = new Location[8];
-	private static final Random random = new Random();
 	private static final int PERCH_MAX_DAMAGE = 50;
 	private static final int SEARCH_RADIUS_SQUARED = 16384; // 128^2
 	private static final int TRICK_RADIUS_SQUARED = 250000; // 500^2
@@ -469,7 +468,7 @@ public class PrimalDragon implements CustomDragon {
 		if(!dragon.getScoreboardTags().contains("Invulnerable") && !dragon.isDead()) {
 			// Crystals hover 10-15 above the ground, so snap to the surface first and then lift off it.
 			Location spawnLoc = Utils.randomLocation(new Location(dragon.getWorld(), 0, 64, 0), 24);
-			spawnLoc.setY(spawnLoc.getY() + 10 + random.nextInt(6));
+			spawnLoc.setY(spawnLoc.getY() + 10 + Random.of(dragon.getWorld()).nextInt(6));
 			dragon.getWorld().spawnEntity(spawnLoc, EntityType.END_CRYSTAL);
 			dragon.setHealth(dragon.getHealth() + 10);
 			for(Player p2 : Bukkit.getOnlinePlayers()) {

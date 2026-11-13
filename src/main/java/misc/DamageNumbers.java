@@ -19,7 +19,6 @@ public final class DamageNumbers {
 	private static final String[] CRIT_CADENCE = {"<green>", "<gold>", "<red>", "<red>", "<gold>", "<green>",
 			"<green>", "<gold>", "<red>"};
 
-	private static final Random RANDOM = new Random();
 	private static final Map<UUID, Deque<TextDisplay>> LIVE = new HashMap<>();
 
 	private static boolean enabled = true;
@@ -73,11 +72,12 @@ public final class DamageNumbers {
 
 	private static Location spawnPoint(LivingEntity target, @javax.annotation.Nullable Entity hitBy) {
 		Location eyes = centre(target, hitBy);
+		Random random = Random.of(target.getWorld());
 		for(int i = 0; i < SPAWN_ATTEMPTS; i++) {
-			double theta = RANDOM.nextDouble() * Math.PI * 2;
-			double y = RANDOM.nextDouble() * 2 - 1;
+			double theta = random.nextDouble() * Math.PI * 2;
+			double y = random.nextDouble() * 2 - 1;
 			double ring = Math.sqrt(1 - y * y);
-			double r = SPAWN_RADIUS * Math.cbrt(RANDOM.nextDouble());
+			double r = SPAWN_RADIUS * Math.cbrt(random.nextDouble());
 			Location at = eyes.clone().add(r * ring * Math.cos(theta), r * y, r * ring * Math.sin(theta));
 			if(at.getBlock().isPassable()) return at;
 		}

@@ -8,10 +8,13 @@ import misc.Utils;
 import org.bukkit.Bukkit;
 import org.bukkit.GameRules;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.Tag;
 import org.bukkit.World;
+import org.bukkit.block.BlockState;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.entity.EntityDamageByBlockEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -472,6 +475,26 @@ public final class Manhunt {
 		if(last != null && now - last < IMPLOSION_IMMUNITY_TICKS) return false;
 		LAST_IMPLOSION.put(victim.getUniqueId(), now);
 		return true;
+	}
+
+	// ---- beds -----------------------------------------------------------------------------------------
+
+	public static final double BED_MAX_DAMAGE = 40;
+	private static final double VANILLA_BED_MAX_DAMAGE = 71;
+
+	public static double bedDamage(EntityDamageByBlockEvent e, double damage) {
+		if(!active() || !(e.getEntity() instanceof Player p)) return damage;
+		BlockState bed = e.getDamagerBlockState();
+		if(bed == null || !Tag.BEDS.isTagged(bed.getType())) return damage;
+		return switch(p.getWorld().getDifficulty()) {
+			case EASY -> normalBedDamage(damage < 2 ? damage : (damage - 1) * 2) / 2;
+			case HARD -> normalBedDamage(damage / 1.5) * 1.5;
+			default -> normalBedDamage(damage);
+		};
+	}
+
+	private static double normalBedDamage(double vanilla) {
+		return vanilla * BED_MAX_DAMAGE / VANILLA_BED_MAX_DAMAGE;
 	}
 
 	// ---- intelligence ---------------------------------------------------------------------------------

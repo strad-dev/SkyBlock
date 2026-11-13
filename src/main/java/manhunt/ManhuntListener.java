@@ -146,11 +146,11 @@ public class ManhuntListener implements Listener {
 		}, 1);
 	}
 
-	/** Pearls at weight 25 for 4-8, glowstone dust at 20 for 5-12. See {@link ManhuntPiglins#reroll}. */
+	/** 1.16.1 table plus four later entries. See {@link ManhuntPiglins#reroll}. */
 	@EventHandler(ignoreCancelled = true)
 	public void onPiglinBarter(PiglinBarterEvent e) {
 		if(!Manhunt.active()) return;
-		ManhuntPiglins.reroll(e.getOutcome());
+		ManhuntPiglins.reroll(e.getEntity(), e.getOutcome());
 	}
 
 	/** No brutes during a match: their axe two-shots a Speedrunner. Swapped for a plain piglin. */

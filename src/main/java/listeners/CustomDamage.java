@@ -7,6 +7,7 @@ import items.weapons.Scylla;
 import items.weapons.SwordOfBadHealth;
 import misc.DamageData;
 import misc.Plugin;
+import misc.Random;
 import misc.Utils;
 import mobs.CustomMob;
 import net.minecraft.advancements.triggers.CriteriaTriggers;
@@ -42,6 +43,7 @@ import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageByBlockEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
@@ -931,7 +933,7 @@ public class CustomDamage implements Listener {
 			if(damager instanceof LivingEntity && (type == DamageType.MELEE || type == DamageType.MELEE_SWEEP)) {
 				EntityEquipment eq = damagee.getEquipment();
 				if(eq != null) {
-					Random random = new Random();
+					Random random = Random.of(damagee.getWorld());
 					int totalThornsLevel = 0;
 					List<ItemStack> thornsArmor = new ArrayList<>();
 
@@ -1884,6 +1886,9 @@ public class CustomDamage implements Listener {
 
 			uncurl(entity, e);
 			double damage = e.getDamage();
+			if(e instanceof EntityDamageByBlockEvent byBlock) {
+				damage = manhunt.Manhunt.bedDamage(byBlock, damage);
+			}
 			if(type == DamageType.FALL) {
 				damage -= FALL_FLAT_REDUCTION;
 			}

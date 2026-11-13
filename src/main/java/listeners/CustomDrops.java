@@ -6,6 +6,7 @@ import items.misc.IceSpray;
 import items.summonItems.*;
 import misc.BossBarManager;
 import misc.Plugin;
+import misc.Random;
 import misc.Utils;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.component.OminousBottleAmplifier;
@@ -25,7 +26,6 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import java.util.List;
-import java.util.Random;
 
 import static misc.Utils.sendRareDropMessage;
 
@@ -45,8 +45,8 @@ public class CustomDrops implements Listener {
 			case 4 -> rngLootingBonus = 1.70;
 			case 5 -> rngLootingBonus = 2.00;
 		}
-		Random random = new Random();
 		World world = died.getWorld();
+		Random random = Random.of(world);
 		Location l = died.getLocation();
 		boolean onFire = died.getFireTicks() > 0;
 		ItemStack item;

@@ -2,18 +2,18 @@ package mobs.enderDragons;
 
 import listeners.DamageType;
 import misc.DamageData;
+import misc.Random;
 import misc.Utils;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.*;
 
-import java.util.Random;
 
 import static listeners.CustomMobs.spawnLightning;
 
 public class Unstable implements CustomDragon {
 	@Override
 	public void whenShootingFireball(DragonFireball fireball) {
-		Random random = new Random();
+		Random random = Random.of(fireball.getWorld());
 		if(random.nextBoolean()) {
 			spawnLightning(fireball, 64);
 		}

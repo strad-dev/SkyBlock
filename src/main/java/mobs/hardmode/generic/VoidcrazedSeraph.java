@@ -5,6 +5,7 @@ import listeners.DamageType;
 import misc.DamageData;
 import misc.GuardianBeams;
 import misc.Plugin;
+import misc.Random;
 import misc.Utils;
 import mobs.CustomMob;
 import net.kyori.adventure.title.Title;
@@ -205,7 +206,7 @@ public class VoidcrazedSeraph implements CustomMob {
 			}, 240);
 			return false;
 		}
-		Random random = new Random();
+		Random random = Random.of(damagee.getWorld());
 		if(random.nextDouble() < 0.2) {
 			damagee.teleport(Utils.randomLocation(damager.getLocation(), 3, damagee.getHeight()));
 		}

@@ -1,13 +1,13 @@
 package mobs.enderDragons;
 
+import misc.Random;
 import mobs.CustomMob;
+import org.bukkit.World;
 import org.bukkit.entity.DragonFireball;
 
-import java.util.Random;
-
 public interface CustomDragon extends CustomMob {
-	static CustomDragon spawnRandom() {
-		Random random = new Random();
+	static CustomDragon spawnRandom(World world) {
+		Random random = Random.of(world);
 		if(random.nextDouble() < 0.04) {
 			return new Superior();
 		} else {

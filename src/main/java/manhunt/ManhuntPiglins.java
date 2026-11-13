@@ -1,71 +1,84 @@
 package manhunt;
 
+import misc.Random;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Piglin;
 import org.bukkit.entity.PiglinBrute;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.EnchantmentStorageMeta;
+import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.potion.PotionType;
 
 import java.util.List;
-import java.util.Random;
+import java.util.function.Function;
 
-/** Manhunt nether rules: better pearl barters, no brutes. Listener gates both on {@link Manhunt#active()}. */
+/** Manhunt nether rules: 1.16.1 barters, no brutes. Listener gates both on {@link Manhunt#active()}. */
 public final class ManhuntPiglins {
 	private ManhuntPiglins() {}
 
-	private static final Random RANDOM = new Random();
+	private record Barter(int weight, Function<Random, ItemStack> item) {}
 
-	/**
-	 * Total weight of vanilla 26.2's {@code loot_table/gameplay/piglin_bartering.json}. Only figure needed, so
-	 * the other entries are never listed; if it drifts the two weights below are just slightly off.
-	 */
-	private static final int VANILLA_WEIGHT = 469;
+	private static final List<Barter> TABLE = List.of(
+			new Barter(5, r -> soulSpeed(r, new ItemStack(Material.ENCHANTED_BOOK))),
+			new Barter(8, r -> soulSpeed(r, new ItemStack(Material.IRON_BOOTS))),
+			new Barter(10, r -> potion(Material.POTION, PotionType.FIRE_RESISTANCE)),
+			new Barter(10, r -> potion(Material.SPLASH_POTION, PotionType.FIRE_RESISTANCE)),
+			new Barter(10, r -> potion(Material.POTION, PotionType.WATER)),
+			new Barter(10, r -> stack(r, Material.IRON_NUGGET, 9, 36)),
+			new Barter(20, r -> stack(r, Material.QUARTZ, 8, 16)),
+			new Barter(20, r -> stack(r, Material.GLOWSTONE_DUST, 5, 12)),
+			new Barter(20, r -> stack(r, Material.MAGMA_CREAM, 2, 6)),
+			new Barter(25, r -> stack(r, Material.ENDER_PEARL, 4, 8)),
+			new Barter(20, r -> stack(r, Material.STRING, 8, 24)),
+			new Barter(10, r -> new ItemStack(Material.DRIED_GHAST)),
+			new Barter(40, r -> stack(r, Material.FIRE_CHARGE, 1, 5)),
+			new Barter(40, r -> stack(r, Material.GRAVEL, 8, 16)),
+			new Barter(40, r -> stack(r, Material.LEATHER, 4, 10)),
+			new Barter(40, r -> stack(r, Material.NETHER_BRICK, 4, 16)),
+			new Barter(40, r -> new ItemStack(Material.OBSIDIAN)),
+			new Barter(40, r -> stack(r, Material.CRYING_OBSIDIAN, 1, 3)),
+			new Barter(40, r -> stack(r, Material.SOUL_SAND, 4, 16)),
+			new Barter(40, r -> stack(r, Material.SPECTRAL_ARROW, 6, 12)),
+			new Barter(40, r -> stack(r, Material.BLACKSTONE, 8, 16)));
 
-	/** Vanilla pearls are weight 10; +15 makes 25. */
-	private static final int EXTRA_PEARL_WEIGHT = 15;
+	private static final int TOTAL_WEIGHT = TABLE.stream().mapToInt(Barter::weight).sum();
 
-	/** Pre-1.16.2 weight; vanilla removed it in 20w28a. */
-	private static final int GLOWSTONE_WEIGHT = 20;
-
-	private static final int PEARLS_MIN = 4;
-	private static final int PEARLS_MAX = 8;
-	private static final int GLOWSTONE_MIN = 5;
-	private static final int GLOWSTONE_MAX = 12;
-
-	/**
-	 * Pearls weight 25 for 4-8 (vanilla 10 for 2-4), glowstone 20 for 5-12, rest untouched. Vanilla already
-	 * rolled, so sample a DELTA over 469 + 15 + 20 = 504: 15 pay pearls, 20 glowstone, 469 keep vanilla's roll.
-	 * Pearls land on 15/504 + 469/504 x 10/469 = 25/504. Vanilla's own pearl stack is resized to 4-8.
-	 * Edits the outcome list in place; it's the only handle the event gives.
-	 */
-	public static void reroll(List<ItemStack> outcome) {
-		int roll = RANDOM.nextInt(VANILLA_WEIGHT + EXTRA_PEARL_WEIGHT + GLOWSTONE_WEIGHT);
-
-		if(roll < EXTRA_PEARL_WEIGHT) {
-			outcome.clear();
-			outcome.add(new ItemStack(Material.ENDER_PEARL, between(PEARLS_MIN, PEARLS_MAX)));
-			return;
-		}
-
-		if(roll < EXTRA_PEARL_WEIGHT + GLOWSTONE_WEIGHT) {
-			outcome.clear();
-			outcome.add(new ItemStack(Material.GLOWSTONE_DUST, between(GLOWSTONE_MIN, GLOWSTONE_MAX)));
-			return;
-		}
-
-		for(ItemStack item : outcome) {
-			if(item != null && item.getType() == Material.ENDER_PEARL) {
-				item.setAmount(between(PEARLS_MIN, PEARLS_MAX));
+	public static void reroll(Piglin piglin, List<ItemStack> outcome) {
+		Random random = Random.of(piglin.getWorld());
+		int roll = random.nextInt(TOTAL_WEIGHT);
+		for(Barter barter : TABLE) {
+			roll -= barter.weight();
+			if(roll < 0) {
+				outcome.clear();
+				outcome.add(barter.item().apply(random));
+				return;
 			}
 		}
 	}
 
-	/** Uniform in {@code [min, max]}, inclusive. */
-	private static int between(int min, int max) {
-		return min + RANDOM.nextInt(max - min + 1);
+	private static ItemStack stack(Random random, Material material, int min, int max) {
+		return new ItemStack(material, random.nextInt(min, max + 1));
+	}
+
+	private static ItemStack soulSpeed(Random random, ItemStack item) {
+		int level = random.nextInt(Enchantment.SOUL_SPEED.getStartLevel(), Enchantment.SOUL_SPEED.getMaxLevel() + 1);
+		if(item.getItemMeta() instanceof EnchantmentStorageMeta) {
+			item.editMeta(EnchantmentStorageMeta.class, meta -> meta.addStoredEnchant(Enchantment.SOUL_SPEED, level, false));
+		} else {
+			item.addEnchantment(Enchantment.SOUL_SPEED, level);
+		}
+		return item;
+	}
+
+	private static ItemStack potion(Material material, PotionType type) {
+		ItemStack item = new ItemStack(material);
+		item.editMeta(PotionMeta.class, meta -> meta.setBasePotionType(type));
+		return item;
 	}
 
 	/** Permanent: reset doesn't restore brutes, nothing records where they were. */

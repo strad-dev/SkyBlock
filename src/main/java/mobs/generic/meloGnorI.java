@@ -3,6 +3,7 @@ package mobs.generic;
 import listeners.CustomDamage;
 import listeners.DamageType;
 import misc.DamageData;
+import misc.Random;
 import misc.Utils;
 import mobs.CustomMob;
 import net.kyori.adventure.title.Title;
@@ -12,7 +13,6 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
 
 import java.time.Duration;
-import java.util.Random;
 
 public class meloGnorI implements CustomMob {
 	@Override
@@ -54,7 +54,7 @@ public class meloGnorI implements CustomMob {
 					CustomDamage.setIFrames(damagee, damager);
 					return false;
 				} else {
-					Random random = new Random();
+					Random random = Random.of(damagee.getWorld());
 					if(random.nextDouble() < 0.15) {
 						CustomDamage.customMobs(entity1, damagee, 20, DamageType.MELEE);
 						damagee.swingMainHand();

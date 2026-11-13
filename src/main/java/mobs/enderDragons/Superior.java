@@ -2,6 +2,7 @@ package mobs.enderDragons;
 
 import listeners.DamageType;
 import misc.DamageData;
+import misc.Random;
 import misc.Utils;
 import org.bukkit.Bukkit;
 import org.bukkit.attribute.Attribute;
@@ -9,7 +10,6 @@ import org.bukkit.entity.*;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
-import java.util.Random;
 
 import static listeners.CustomDamage.calculateFinalDamage;
 import static listeners.CustomMobs.spawnLightning;
@@ -17,7 +17,7 @@ import static listeners.CustomMobs.spawnLightning;
 public class Superior implements CustomDragon {
 	@Override
 	public void whenShootingFireball(DragonFireball fireball) {
-		Random random = new Random();
+		Random random = Random.of(fireball.getWorld());
 		if(random.nextDouble() < 0.25) {
 			spawnLightning(fireball, 64);
 		}

@@ -2,13 +2,13 @@ package mobs.withers;
 
 import listeners.DamageType;
 import misc.DamageData;
+import misc.Random;
 import misc.Utils;
 import org.bukkit.Bukkit;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
 import org.bukkit.util.Vector;
 
-import java.util.Random;
 
 import static misc.Utils.teleport;
 
@@ -37,7 +37,7 @@ public class Maxor implements CustomWither {
 		if(((Wither) damagee).getInvulnerableTicks() != 0 && type != DamageType.LETHAL_ABSOLUTE || type == DamageType.IFRAME_ENVIRONMENTAL) {
 			return false;
 		}
-		Random random = new Random();
+		Random random = Random.of(damagee.getWorld());
 		if(!type.equals(DamageType.RANGED) && random.nextDouble() < 0.1 || type.equals(DamageType.RANGED) && random.nextDouble() < 0.05) {
 			teleport(damagee, 8, false);
 		}
