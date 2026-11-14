@@ -3,6 +3,7 @@ package manhunt.structures;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -30,7 +31,9 @@ public enum LootRule {
 	VILLAGE("Village", Set.of(BuiltInLootTables.VILLAGE_WEAPONSMITH),
 			s -> s.is(Items.IRON_SWORD) || s.is(ItemTags.SPEARS)),
 	OCEAN_RUIN("Ocean Ruin", Set.of(BuiltInLootTables.UNDERWATER_RUIN_SMALL, BuiltInLootTables.UNDERWATER_RUIN_BIG),
-			s -> s.is(Items.STONE_AXE) || s.is(Items.STONE_SPEAR));
+			s -> s.is(Items.STONE_AXE) || s.is(Items.STONE_SPEAR)),
+	SHIPWRECK("Shipwreck", Set.of(BuiltInLootTables.SHIPWRECK_MAP, BuiltInLootTables.SHIPWRECK_SUPPLY, BuiltInLootTables.SHIPWRECK_TREASURE),
+			s -> !s.isEmpty());
 
 	public record Match(BlockPos chest, ItemStack item) {}
 
@@ -55,9 +58,14 @@ public enum LootRule {
 		return tables.contains(table);
 	}
 
+	public boolean anyItem() {
+		return this == SHIPWRECK;
+	}
+
 	public boolean reachable(Function<BlockPos, BlockState> blocks, int maxY, BlockPos chest) {
-		if(this != OCEAN_RUIN) return true;
+		if(this != OCEAN_RUIN && this != SHIPWRECK) return true;
 		if(!open(blocks.apply(chest.above()))) return false;
+		if(this == SHIPWRECK && Direction.Plane.HORIZONTAL.stream().noneMatch(side -> open(blocks.apply(chest.relative(side))))) return false;
 		BlockPos.MutableBlockPos pos = chest.above(2).mutable();
 		for(; pos.getY() <= maxY; pos.move(Direction.UP)) {
 			BlockState state = blocks.apply(pos.immutable());
@@ -69,7 +77,7 @@ public enum LootRule {
 	}
 
 	private static boolean open(BlockState state) {
-		return state.isAir() || state.is(Blocks.WATER) || state.is(Blocks.BUBBLE_COLUMN);
+		return state.is(BlockTags.REPLACEABLE) && !state.is(Blocks.LAVA) || state.is(Blocks.KELP) || state.is(Blocks.KELP_PLANT);
 	}
 
 	public Match firstWanted(BlockPos chest, Iterable<ItemStack> loot) {
@@ -89,6 +97,13 @@ public enum LootRule {
 			}
 		}
 		return new ArrayList<>(out);
+	}
+
+	public static boolean under(List<BoundingBox> boxes, BlockPos pos) {
+		for(BoundingBox box : boxes) {
+			if(pos.getX() >= box.minX() && pos.getX() <= box.maxX() && pos.getZ() >= box.minZ() && pos.getZ() <= box.maxZ()) return true;
+		}
+		return false;
 	}
 
 	public List<BoundingBox> boxes(StructureStart start) {

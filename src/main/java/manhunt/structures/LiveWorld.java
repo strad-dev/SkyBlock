@@ -72,7 +72,7 @@ public record LiveWorld(ServerLevel level) implements StructureWorld {
 				ResourceKey<LootTable> key = container.getLootTable();
 				if(key == null || !rule.rolls(key)) continue;
 				BlockPos pos = entity.getBlockPos();
-				if(boxes.stream().noneMatch(box -> box.isInside(pos)) || !rule.reachable(level::getBlockState, level.getMaxY(), pos)) continue;
+				if(!LootRule.under(boxes, pos) || !rule.reachable(level::getBlockState, level.getMaxY(), pos)) continue;
 				LootParams params = new LootParams.Builder(level)
 						.withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(pos))
 						.create(LootContextParamSets.CHEST);

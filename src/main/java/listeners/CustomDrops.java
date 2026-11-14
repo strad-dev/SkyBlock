@@ -719,7 +719,7 @@ public class CustomDrops implements Listener {
 				if(random.nextDouble() < 0.01 * rngLootingBonus && p != null) {
 					item = IceSpray.getItem();
 					world.dropItemNaturally(l, item);
-					sendRareDropMessage(p, item, "Ice Spray Wand");`
+					sendRareDropMessage(p, item, "Ice Spray Wand");
 				}
 			}
 			case Strider strider -> {

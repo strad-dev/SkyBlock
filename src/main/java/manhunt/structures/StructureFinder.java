@@ -3,9 +3,12 @@ package manhunt.structures;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderGetter;
+import net.minecraft.core.QuartPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.tags.BiomeTags;
+import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.ChunkGeneratorStructureState;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -28,8 +31,7 @@ public final class StructureFinder {
 	/** Same radius as /locate, in grid cells. */
 	public static final int SEARCH_RINGS = 100;
 
-	private static final int MIN_OCEAN_Y = 31;
-	private static final String SHIPWRECK = "Shipwreck";
+	private static final int MIN_OCEAN_FLOOR_Y = 41;
 
 	public record Found(String type, BlockPos pos, double distance, StructureStart start) {}
 
@@ -93,7 +95,7 @@ public final class StructureFinder {
 				cells.poll();
 				for(Map.Entry<Holder<Structure>, String> entry : cell.grid().structures().entrySet()) {
 					StructureStart start = world.startAt(entry.getKey().value(), cell.grid().spread(), cell.chunk());
-					if(start != null && reasonableHeight(entry.getValue(), start)) return new Found(entry.getValue(), cell.pos(), Math.sqrt(cell.distSq()), start);
+					if(start != null && reasonableHeight(entry.getKey(), entry.getValue(), start)) return new Found(entry.getValue(), cell.pos(), Math.sqrt(cell.distSq()), start);
 				}
 				continue;
 			}
@@ -119,16 +121,24 @@ public final class StructureFinder {
 		}
 	}
 
-	private boolean reasonableHeight(String type, StructureStart start) {
+	private boolean reasonableHeight(Holder<Structure> structure, String type, StructureStart start) {
 		BoundingBox box = start.getBoundingBox();
+		if(structure.is(BuiltinStructures.RUINED_PORTAL_OCEAN) || structure.is(BuiltinStructures.SHIPWRECK)) {
+			return shallowOcean(box.getCenter().getX(), box.getCenter().getZ());
+		}
 		if(type.equals(LootRule.RUINED_PORTAL.type)) return box.maxY() >= world.generator().getSeaLevel();
-		if(type.equals(SHIPWRECK)) return box.minY() >= MIN_OCEAN_Y;
 		if(type.equals(LootRule.OCEAN_RUIN.type) && start.getPieces().getFirst() instanceof TemplateStructurePiece ruin) {
-			BlockPos at = ruin.templatePosition();
-			return world.generator().getBaseHeight(at.getX(), at.getZ(), Heightmap.Types.OCEAN_FLOOR_WG, world.heightAccessor(),
-					world.randomState()) >= MIN_OCEAN_Y;
+			return shallowOcean(ruin.templatePosition().getX(), ruin.templatePosition().getZ());
 		}
 		return true;
+	}
+
+	private boolean shallowOcean(int x, int z) {
+		int floor = world.generator().getBaseHeight(x, z, Heightmap.Types.OCEAN_FLOOR_WG, world.heightAccessor(), world.randomState());
+		if(floor < MIN_OCEAN_FLOOR_Y) return false;
+		Holder<Biome> biome = world.generator().getBiomeSource().getNoiseBiome(QuartPos.fromBlock(x), QuartPos.fromBlock(floor),
+				QuartPos.fromBlock(z), world.randomState().sampler());
+		return !biome.is(BiomeTags.IS_DEEP_OCEAN);
 	}
 
 	/** Structure to display name. The nether ruined portal is left out: it never generates in the overworld. */
@@ -140,7 +150,7 @@ public final class StructureFinder {
 		name(out, structures, LootRule.RUINED_PORTAL.type, BuiltinStructures.RUINED_PORTAL_STANDARD, BuiltinStructures.RUINED_PORTAL_DESERT,
 				BuiltinStructures.RUINED_PORTAL_JUNGLE, BuiltinStructures.RUINED_PORTAL_SWAMP, BuiltinStructures.RUINED_PORTAL_MOUNTAIN,
 				BuiltinStructures.RUINED_PORTAL_OCEAN);
-		name(out, structures, SHIPWRECK, BuiltinStructures.SHIPWRECK, BuiltinStructures.SHIPWRECK_BEACHED);
+		name(out, structures, LootRule.SHIPWRECK.type, BuiltinStructures.SHIPWRECK, BuiltinStructures.SHIPWRECK_BEACHED);
 		name(out, structures, LootRule.VILLAGE.type, BuiltinStructures.VILLAGE_PLAINS, BuiltinStructures.VILLAGE_DESERT,
 				BuiltinStructures.VILLAGE_SAVANNA, BuiltinStructures.VILLAGE_SNOWY, BuiltinStructures.VILLAGE_TAIGA);
 		return out;
