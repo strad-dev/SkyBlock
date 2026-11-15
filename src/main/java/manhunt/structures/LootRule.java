@@ -35,7 +35,7 @@ public enum LootRule {
 	SHIPWRECK("Shipwreck", Set.of(BuiltInLootTables.SHIPWRECK_MAP, BuiltInLootTables.SHIPWRECK_SUPPLY, BuiltInLootTables.SHIPWRECK_TREASURE),
 			s -> !s.isEmpty());
 
-	public record Match(BlockPos chest, ItemStack item) {}
+	public record Match(BlockPos chest, ItemStack item, boolean wanted) {}
 
 	public final String type;
 	private final Set<ResourceKey<LootTable>> tables;
@@ -62,10 +62,21 @@ public enum LootRule {
 		return this == SHIPWRECK;
 	}
 
+	public boolean tierOne() {
+		return this != SHIPWRECK;
+	}
+
+	public static int tier(String type, Match match) {
+		LootRule rule = of(type);
+		if(rule == null) return 2;
+		if(match != null) return match.wanted() && rule.tierOne() ? 1 : 2;
+		return rule == VILLAGE ? 2 : 0;
+	}
+
 	public boolean reachable(Function<BlockPos, BlockState> blocks, int maxY, BlockPos chest) {
-		if(this != OCEAN_RUIN && this != SHIPWRECK) return true;
+		if(this == VILLAGE) return true;
 		if(!open(blocks.apply(chest.above()))) return false;
-		if(this == SHIPWRECK && Direction.Plane.HORIZONTAL.stream().noneMatch(side -> open(blocks.apply(chest.relative(side))))) return false;
+		if(this != OCEAN_RUIN && Direction.Plane.HORIZONTAL.stream().noneMatch(side -> open(blocks.apply(chest.relative(side))))) return false;
 		BlockPos.MutableBlockPos pos = chest.above(2).mutable();
 		for(; pos.getY() <= maxY; pos.move(Direction.UP)) {
 			BlockState state = blocks.apply(pos.immutable());
@@ -77,14 +88,23 @@ public enum LootRule {
 	}
 
 	private static boolean open(BlockState state) {
-		return state.is(BlockTags.REPLACEABLE) && !state.is(Blocks.LAVA) || state.is(Blocks.KELP) || state.is(Blocks.KELP_PLANT);
+		return state.is(BlockTags.REPLACEABLE) && !state.is(Blocks.LAVA) || state.is(Blocks.KELP) || state.is(Blocks.KELP_PLANT)
+				|| state.is(BlockTags.CORALS) || state.is(BlockTags.WALL_CORALS) || state.is(Blocks.SEA_PICKLE);
 	}
 
-	public Match firstWanted(BlockPos chest, Iterable<ItemStack> loot) {
+	public Match best(BlockPos chest, Iterable<ItemStack> loot) {
+		ItemStack first = null;
 		for(ItemStack stack : loot) {
-			if(wanted.test(stack)) return new Match(chest, stack);
+			if(wanted.test(stack)) return new Match(chest, stack, true);
+			if(first == null && !stack.isEmpty()) first = stack;
 		}
-		return null;
+		return first == null ? null : new Match(chest, first, false);
+	}
+
+	public static Match better(Match a, Match b) {
+		if(a == null) return b;
+		if(b == null) return a;
+		return b.wanted() && !a.wanted() ? b : a;
 	}
 
 	public List<ChunkPos> chunks(StructureStart start) {

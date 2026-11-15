@@ -23,6 +23,8 @@ public final class ManhuntHints {
 
 	private static Level level = Level.TYPE;
 
+	private static final double TIER_ONE_RANGE = 1024;
+
 	private static final String[] DIRECTIONS = {"North", "North-northeast", "Northeast", "East-northeast", "East",
 			"East-southeast", "Southeast", "South-southeast", "South", "South-southwest", "Southwest", "West-southwest",
 			"West", "West-northwest", "Northwest", "North-northwest"};
@@ -41,17 +43,29 @@ public final class ManhuntHints {
 		for(Player p : Manhunt.onlineSpeedrunners()) {
 			Location at = p.getLocation();
 			LiveWorld world = new LiveWorld(((CraftWorld) at.getWorld()).getHandle());
-			search(p, at, world, new StructureFinder(world, at.getX(), at.getZ(), Double.MAX_VALUE));
+			search(p, at, world, new StructureFinder(world, at.getX(), at.getZ(), Double.MAX_VALUE), null);
 		}
 	}
 
-	private static void search(Player p, Location at, LiveWorld live, StructureFinder finder) {
+	private static void search(Player p, Location at, LiveWorld live, StructureFinder finder, StructureFinder.Found fallback) {
 		if(!p.isOnline()) return;
 		StructureFinder.Found found = finder.next();
-		if(found == null) return;
+		boolean inRange = found != null && found.distance() <= TIER_ONE_RANGE;
+		if(found == null || !inRange && fallback != null) {
+			if(fallback != null) tell(p, at, fallback);
+			return;
+		}
 		LootRule rule = LootRule.of(found.type());
-		if(rule == null) {
-			tell(p, at, found);
+		if(rule == null || !inRange && rule.tierOne()) {
+			if(!inRange) {
+				tell(p, at, found);
+			} else {
+				search(p, at, live, finder, fallback == null ? found : fallback);
+			}
+			return;
+		}
+		if(!rule.tierOne() && fallback != null) {
+			search(p, at, live, finder, fallback);
 			return;
 		}
 		World world = at.getWorld();
@@ -59,10 +73,11 @@ public final class ManhuntHints {
 				.map(chunk -> world.getChunkAtAsync(chunk.x(), chunk.z()))
 				.toArray(CompletableFuture[]::new);
 		CompletableFuture.allOf(loads).whenComplete((done, error) -> Bukkit.getScheduler().runTask(Plugin.getInstance(), () -> {
-			if(live.match(rule, found.start()) != null) {
+			int tier = LootRule.tier(found.type(), live.match(rule, found.start()));
+			if(tier == 1 || tier == 2 && !inRange) {
 				tell(p, at, found);
 			} else {
-				search(p, at, live, finder);
+				search(p, at, live, finder, tier == 2 && fallback == null ? found : fallback);
 			}
 		}));
 	}

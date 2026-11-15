@@ -66,6 +66,7 @@ public record LiveWorld(ServerLevel level) implements StructureWorld {
 
 	public LootRule.Match match(LootRule rule, StructureStart start) {
 		List<BoundingBox> boxes = rule.boxes(start);
+		LootRule.Match best = null;
 		for(ChunkPos chunk : rule.chunks(start)) {
 			for(BlockEntity entity : level.getChunk(chunk.x(), chunk.z()).getBlockEntities().values()) {
 				if(!(entity instanceof RandomizableContainer container)) continue;
@@ -77,10 +78,10 @@ public record LiveWorld(ServerLevel level) implements StructureWorld {
 						.withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(pos))
 						.create(LootContextParamSets.CHEST);
 				LootTable table = level.getServer().reloadableRegistries().getLootTable(key);
-				LootRule.Match match = rule.firstWanted(pos, table.getRandomItems(params, RandomSource.create(container.getLootTableSeed())));
-				if(match != null) return match;
+				best = LootRule.better(best, rule.best(pos, table.getRandomItems(params, RandomSource.create(container.getLootTableSeed()))));
+				if(best != null && best.wanted()) return best;
 			}
 		}
-		return null;
+		return best;
 	}
 }
