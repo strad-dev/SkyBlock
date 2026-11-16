@@ -17,8 +17,8 @@ import net.minecraft.world.level.levelgen.structure.BuiltinStructures;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.TemplateStructurePiece;
 import net.minecraft.world.level.levelgen.structure.StructureStart;
+import net.minecraft.world.level.levelgen.structure.StructureSet;
 import net.minecraft.world.level.levelgen.structure.placement.RandomSpreadStructurePlacement;
-import net.minecraft.world.level.levelgen.structure.placement.StructurePlacement;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -26,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.Set;
 
 public final class StructureFinder {
 	/** Same radius as /locate, in grid cells. */
@@ -59,10 +60,13 @@ public final class StructureFinder {
 		this.chunkZ = SectionPos.blockToSectionCoord(z);
 		ChunkGeneratorStructureState state = world.structureState();
 		this.seed = state.getLevelSeed();
+		Set<Holder<Biome>> biomes = world.generator().getBiomeSource().possibleBiomes();
 		Map<RandomSpreadStructurePlacement, Map<Holder<Structure>, String>> byGrid = new LinkedHashMap<>();
 		for(Map.Entry<Holder<Structure>, String> entry : interest(world.registryAccess().lookupOrThrow(Registries.STRUCTURE)).entrySet()) {
-			for(StructurePlacement placement : state.getPlacementsForStructure(entry.getKey())) {
-				if(placement instanceof RandomSpreadStructurePlacement spread) {
+			if(entry.getKey().value().biomes().stream().noneMatch(biomes::contains)) continue;
+			for(Holder<StructureSet> set : state.possibleStructureSets()) {
+				if(set.value().placement() instanceof RandomSpreadStructurePlacement spread
+						&& set.value().structures().stream().anyMatch(e -> e.structure().value() == entry.getKey().value())) {
 					byGrid.computeIfAbsent(spread, k -> new LinkedHashMap<>()).put(entry.getKey(), entry.getValue());
 				}
 			}

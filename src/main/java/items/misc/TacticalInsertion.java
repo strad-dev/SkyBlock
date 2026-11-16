@@ -70,7 +70,7 @@ public class TacticalInsertion implements AbilityItem {
 		Utils.scheduleTask(() -> p.playSound(p, Sound.BLOCK_NOTE_BLOCK_HAT, 1.0F, 1.059463F), 50);
 		Utils.scheduleTask(() -> {
 			p.playSound(p, Sound.ENTITY_ZOMBIE_VILLAGER_CURE, 1.0F, 1.0F);
-			p.teleport(l);
+			Utils.noRotateTeleport(p, l);
 			p.setVelocity(new Vector(0, 0, 0));
 			Utils.scheduleTask(() -> p.getWorld().spawnParticle(Particle.FLAME, p.getLocation(), 128), 1);
 		}, 60);

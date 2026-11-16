@@ -13,6 +13,9 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.minecraft.advancements.triggers.CriteriaTriggers;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.PositionMoveRotation;
+import net.minecraft.world.entity.Relative;
+import net.minecraft.world.phys.Vec3;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
@@ -23,6 +26,7 @@ import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.player.PlayerItemBreakEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -774,6 +778,22 @@ public class Utils {
 		if(sound) {
 			e.getWorld().playSound(e.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.0F, 1.0F);
 		}
+	}
+
+	/**
+	 * Teleports the player without touching their view: yaw/pitch go out relative with a 0 delta (relative values are
+	 * offsets, so passing the player's own yaw would spin them). Paper deprecated {@code TeleportFlag.Relative}
+	 * rotation, hence the connection; it still fires {@code PlayerTeleportEvent} (PLUGIN). Other worlds go absolute.
+	 */
+	public static void noRotateTeleport(Player p, Location l) {
+		if(l.getWorld() != p.getWorld()) {
+			p.teleport(l);
+			return;
+		}
+		((CraftPlayer) p).getHandle().connection.teleport(
+				new PositionMoveRotation(new Vec3(l.getX(), l.getY(), l.getZ()), Vec3.ZERO, 0f, 0f),
+				Set.of(Relative.Y_ROT, Relative.X_ROT),
+				PlayerTeleportEvent.TeleportCause.PLUGIN);
 	}
 
 	/**

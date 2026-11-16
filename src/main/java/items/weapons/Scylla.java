@@ -228,9 +228,7 @@ public class Scylla implements AbilityItem {
 					}
 				}
 
-				l.setYaw(origin.getYaw());
-				l.setPitch(origin.getPitch());
-				p.teleport(l);
+				Utils.noRotateTeleport(p, l);
 			} else {
 				switch(result.getHitBlockFace()) {
 					case SELF -> {
@@ -238,15 +236,11 @@ public class Scylla implements AbilityItem {
 					}
 					case UP -> {
 						l = result.getHitBlock().getLocation().add(0.5, 1, 0.5);
-						l.setYaw(origin.getYaw());
-						l.setPitch(origin.getPitch());
-						p.teleport(l);
+						Utils.noRotateTeleport(p, l);
 					}
 					case DOWN -> {
 						l = result.getHitBlock().getLocation().add(0.5, -2, 0.5);
-						l.setYaw(origin.getYaw());
-						l.setPitch(origin.getPitch());
-						p.teleport(l);
+						Utils.noRotateTeleport(p, l);
 					}
 					default -> {
 						// Hit a side face - backtrack until we find a safe spot
@@ -284,9 +278,7 @@ public class Scylla implements AbilityItem {
 								if(checkLoc.distance(hitLocation) >= 0.5) {
 									// Center on the block we're in
 									l = new Location(checkLoc.getWorld(), Math.floor(checkLoc.getX()) + 0.5, Math.floor(checkLoc.getY()), Math.floor(checkLoc.getZ()) + 0.5);
-									l.setYaw(origin.getYaw());
-									l.setPitch(origin.getPitch());
-									p.teleport(l);
+									Utils.noRotateTeleport(p, l);
 									break;
 								}
 							}
@@ -295,9 +287,7 @@ public class Scylla implements AbilityItem {
 						// If we found a safe spot but didn't teleport yet
 						if(lastSafe != null) {
 							l = new Location(lastSafe.getWorld(), Math.floor(lastSafe.getX()) + 0.5, Math.floor(lastSafe.getY()), Math.floor(lastSafe.getZ()) + 0.5);
-							l.setYaw(origin.getYaw());
-							l.setPitch(origin.getPitch());
-							p.teleport(l);
+							Utils.noRotateTeleport(p, l);
 						}
 					}
 				}

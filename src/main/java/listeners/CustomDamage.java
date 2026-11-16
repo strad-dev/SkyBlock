@@ -1133,9 +1133,9 @@ public class CustomDamage implements Listener {
 									Component message = damageSource.getLocalizedDeathMessage(nmsPlayer);
 									nextDeathMessage = io.papermc.paper.adventure.PaperAdventure.asAdventure(message);
 								} else {
-									// Killer's formatted name, not getName(), so a boss keeps its colours/shimmer in the death message.
-									net.kyori.adventure.text.Component killer = damager instanceof LivingEntity dle && dle.customName() != null ? dle.customName() : net.kyori.adventure.text.Component.text(damager != null ? damager.getName() : "absolutely no one");
-									net.kyori.adventure.text.Component who = net.kyori.adventure.text.Component.text(p.getName());
+									// Team display names, like vanilla's: a boss keeps its colours/shimmer, a player their rank prefix + colour.
+									net.kyori.adventure.text.Component killer = damager != null ? damager.teamDisplayName() : net.kyori.adventure.text.Component.text("absolutely no one");
+									net.kyori.adventure.text.Component who = p.teamDisplayName();
 									nextDeathMessage = switch(type) {
 										case MELEE, MELEE_SWEEP -> who.append(net.kyori.adventure.text.Component.text(" was slain by ")).append(killer);
 										case RANGED -> who.append(net.kyori.adventure.text.Component.text(" was shot by ")).append(killer);
