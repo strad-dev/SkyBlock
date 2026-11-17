@@ -1408,18 +1408,9 @@ public class CustomDamage implements Listener {
 			// Damage dealt
 			serverPlayer.awardStat(Stats.DAMAGE_DEALT, Math.round((float) finalDamage * 10));
 
-			if(wasKilled) {
-				// Mob kills
+			if(wasKilled && !(victim instanceof Player)) {
 				serverPlayer.awardStat(Stats.MOB_KILLS);
-
-				// Specific entity kills
-				net.minecraft.world.entity.EntityType<?> entityType = getEntityType(victim);
-				serverPlayer.awardStat(Stats.ENTITY_KILLED.get(entityType));
-
-				// Player kills (if victim is player)
-				if(victim instanceof Player) {
-					serverPlayer.awardStat(Stats.PLAYER_KILLS);
-				}
+				serverPlayer.awardStat(Stats.ENTITY_KILLED.get(((CraftEntity) victim).getHandle().getType()));
 			}
 
 			// Weapon-specific statistics
@@ -1432,17 +1423,6 @@ public class CustomDamage implements Listener {
 
 			// Damage taken
 			serverPlayer.awardStat(Stats.DAMAGE_TAKEN, Math.round((float) finalDamage * 10));
-
-			if(wasKilled) {
-				// Deaths
-				serverPlayer.awardStat(Stats.DEATHS);
-
-				// Death by specific entity
-				if(attacker != null) {
-					net.minecraft.world.entity.EntityType<?> entityType = getEntityType(attacker);
-					serverPlayer.awardStat(Stats.ENTITY_KILLED_BY.get(entityType));
-				}
-			}
 		}
 	}
 
@@ -1470,10 +1450,6 @@ public class CustomDamage implements Listener {
 				}
 			}
 		}
-	}
-
-	private static net.minecraft.world.entity.EntityType<?> getEntityType(Entity entity) {
-		return ((CraftEntity) entity).getHandle().getType();
 	}
 
 	private static boolean isSculkCatalystNearby(Location location) {
