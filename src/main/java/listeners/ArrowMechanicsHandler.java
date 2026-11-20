@@ -59,14 +59,8 @@ public class ArrowMechanicsHandler implements Listener {
 					arrow.remove();
 				}
 			} else {
-				// Phase Terminator arrows through falling blocks. A FallingBlock is a legal arrow target, so a
-				// Gyrokinetic Wand's 64-block swarm became an arrow-proof wall, each block burning one of 4 pierce
-				// levels. The blocks are invulnerable decoration anyway; cancelling before onHitEntity keeps pierce.
-				if(e.getHitEntity() instanceof FallingBlock && arrow.getScoreboardTags().contains("TerminatorArrow")) {
-					e.setCancelled(true);
-				}
 				// Handle arrows hitting entities - prevent self-hits
-				else if(e.getHitEntity() instanceof Player player && arrow.getShooter() instanceof Player shooter && player.equals(shooter)) {
+				if(e.getHitEntity() instanceof Player player && arrow.getShooter() instanceof Player shooter && player.equals(shooter)) {
 					e.setCancelled(true);
 				}
 			}

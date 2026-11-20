@@ -6,16 +6,21 @@ import misc.Random;
 import misc.Utils;
 import mobs.hardmode.generic.VoidcrazedSeraph;
 import org.bukkit.*;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockDamageAbortEvent;
 import org.bukkit.event.block.BlockDamageEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.RayTraceResult;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -24,9 +29,10 @@ import java.util.UUID;
 import static misc.Utils.sendRareDropMessage;
 
 public class CustomMining implements Listener {
-	// Players actively breaking a Voidgloom yang-glyph beacon: their target block + the scheduled defuse.
-	private final Map<UUID, Block> beaconTarget = new HashMap<>();
-	private final Map<UUID, BukkitTask> beaconTask = new HashMap<>();
+	// Players defusing a Voidgloom yang-glyph beacon. crackId is ours, not the player's entity id, so vanilla's own
+	// (slower) crack broadcast for that player never overwrites it; the client draws the higher of the two.
+	private record Defuse(Block block, BukkitTask task, int crackId) {}
+	private final Map<UUID, Defuse> defusing = new HashMap<>();
 
 	/**
 	 * Voidgloom yang-glyph beacon: defuse it on a fixed timer (3s fist, 2s Divan's Pickaxe) instead of the slow
@@ -34,23 +40,15 @@ public class CustomMining implements Listener {
 	 */
 	@EventHandler(ignoreCancelled = true)
 	public void onBeaconDamage(BlockDamageEvent e) {
-		Block b = e.getBlock();
-		if(!VoidcrazedSeraph.isVoidgloomBeacon(b) || b.getType() != Material.BEACON) return;
-		Player p = e.getPlayer();
-		UUID id = p.getUniqueId();
-		if(b.equals(beaconTarget.get(id))) return; // already breaking this beacon
-		cancelBeacon(id);
-		boolean divan = isDivanPickaxe(p.getInventory().getItemInMainHand());
-		long ticks = divan ? 40L : 60L; // 2s with Divan's Pickaxe (33% faster), 3s otherwise
-		beaconTarget.put(id, b);
-		beaconTask.put(id, Bukkit.getScheduler().runTaskLater(Plugin.getInstance(), () -> {
-			beaconTarget.remove(id);
-			beaconTask.remove(id);
-			if(VoidcrazedSeraph.isVoidgloomBeacon(b) && b.getType() == Material.BEACON) {
-				b.setType(Material.AIR); // defused before the boss can detonate it
-				b.getWorld().playSound(b.getLocation(), Sound.BLOCK_BEACON_DEACTIVATE, 1.0f, 1.0f);
-			}
-		}, ticks));
+		startDefuse(e.getPlayer(), e.getBlock(), false);
+	}
+
+	// Adventure: with no can_break item the client never digs a beacon, it only swings, which Paper reports as
+	// LEFT_CLICK_BLOCK. Holding the button doesn't swing again, so one click starts it and looking away aborts.
+	@EventHandler
+	public void onBeaconClick(PlayerInteractEvent e) {
+		if(e.getAction() != Action.LEFT_CLICK_BLOCK || e.getClickedBlock() == null || e.getPlayer().getGameMode() != GameMode.ADVENTURE) return;
+		startDefuse(e.getPlayer(), e.getClickedBlock(), true);
 	}
 
 	@EventHandler
@@ -58,10 +56,53 @@ public class CustomMining implements Listener {
 		cancelBeacon(e.getPlayer().getUniqueId());
 	}
 
+	private void startDefuse(Player p, Block b, boolean mustLook) {
+		if(!VoidcrazedSeraph.isVoidgloomBeacon(b) || b.getType() != Material.BEACON) return;
+		UUID id = p.getUniqueId();
+		Defuse current = defusing.get(id);
+		if(current != null && b.equals(current.block())) return; // already breaking this beacon
+		cancelBeacon(id);
+		int total = isDivanPickaxe(p.getInventory().getItemInMainHand()) ? 40 : 60; // 2s Divan's (33% faster), 3s otherwise
+		int crackId = -1 - p.getEntityId();
+		BukkitTask task = new BukkitRunnable() {
+			int ticks = 0;
+
+			@Override
+			public void run() {
+				if(!p.isOnline() || !VoidcrazedSeraph.isVoidgloomBeacon(b) || b.getType() != Material.BEACON || mustLook && !lookingAt(p, b)) {
+					cancelBeacon(id);
+					return;
+				}
+				if(++ticks >= total) {
+					cancelBeacon(id);
+					b.setType(Material.AIR); // defused before the boss can detonate it
+					b.getWorld().playSound(b.getLocation(), Sound.BLOCK_BEACON_DEACTIVATE, 1.0f, 1.0f);
+					return;
+				}
+				sendCrack(b, crackId, (float) ticks / total);
+			}
+		}.runTaskTimer(Plugin.getInstance(), 0L, 1L);
+		defusing.put(id, new Defuse(b, task, crackId));
+	}
+
 	private void cancelBeacon(UUID id) {
-		BukkitTask t = beaconTask.remove(id);
-		if(t != null) t.cancel();
-		beaconTarget.remove(id);
+		Defuse d = defusing.remove(id);
+		if(d == null) return;
+		d.task().cancel();
+		sendCrack(d.block(), d.crackId(), 0); // 0 clears it
+	}
+
+	private static boolean lookingAt(Player p, Block b) {
+		RayTraceResult hit = p.rayTraceBlocks(p.getAttribute(Attribute.BLOCK_INTERACTION_RANGE).getValue());
+		return hit != null && b.equals(hit.getHitBlock());
+	}
+
+	// Vanilla's broadcast range for block cracks.
+	private static void sendCrack(Block b, int crackId, float progress) {
+		Location l = b.getLocation();
+		for(Player viewer : b.getWorld().getPlayers()) {
+			if(viewer.getLocation().distanceSquared(l) < 32 * 32) viewer.sendBlockDamage(l, progress, crackId);
+		}
 	}
 
 	private static boolean isDivanPickaxe(ItemStack item) {

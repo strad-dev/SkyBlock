@@ -41,10 +41,11 @@ public class Storm implements CustomWither {
 
 	@Override
 	public boolean whenDamaging(LivingEntity damagee, Entity damager, double originalDamage, DamageType type, DamageData data) {
-		Random random = Random.of(damagee.getWorld());
-		if(random.nextBoolean()) {
-			CustomMobs.strike(damagee.getLocation(), LIGHTNING_DAMAGE);
-		}
+		data.onLanded = () -> {
+			if(Random.of(damagee.getWorld()).nextBoolean()) {
+				CustomMobs.strikeBonus(damagee.getLocation(), LIGHTNING_DAMAGE);
+			}
+		};
 		return true;
 	}
 

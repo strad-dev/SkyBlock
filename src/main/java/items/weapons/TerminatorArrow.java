@@ -1,5 +1,7 @@
 package items.weapons;
 
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.entity.projectile.arrow.Arrow;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -21,6 +23,13 @@ import javax.annotation.Nullable;
 public class TerminatorArrow extends Arrow {
 	public TerminatorArrow(Level level, double x, double y, double z, ItemStack pickup, @Nullable ItemStack weapon) {
 		super(level, x, y, z, pickup, weapon);
+	}
+
+	// Through falling blocks (Gyrokinetic Wand's swarm). Cancelling the ProjectileHitEvent didn't work: the cancelled
+	// hit never enters piercingIgnoreEntityIds, so stepMoveAndHit re-hit the same block and the arrow stalled on it.
+	@Override
+	protected boolean canHitEntity(Entity entity) {
+		return !(entity instanceof FallingBlockEntity) && super.canHitEntity(entity);
 	}
 
 	@Override

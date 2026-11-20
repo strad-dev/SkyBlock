@@ -11,7 +11,7 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 
-import static listeners.CustomDamage.calculateFinalDamage;
+import listeners.CustomDamage;
 import static listeners.CustomMobs.spawnLightning;
 
 public class Superior implements CustomDragon {
@@ -51,7 +51,7 @@ public class Superior implements CustomDragon {
 
 	@Override
 	public boolean whenDamaging(LivingEntity damagee, Entity damager, double originalDamage, DamageType type, DamageData data) {
-		calculateFinalDamage(damagee, damager, 3, DamageType.RANGED);
+		data.onLanded = () -> CustomDamage.dealBonus(damagee, damager, 3);
 		return true;
 	}
 }

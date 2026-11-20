@@ -28,6 +28,12 @@ public class DamageData {
 	// wouldn't: the mace branch in dealDamage zeroes the fall distance it's built on.
 	public boolean isCrit = false;
 	public boolean feedbackOnly = false;
+	// A boss's bonus hit (whenDamaging): dealt by dealDamage only if this hit lands, so it respects i-frames.
+	public Runnable onLanded = null;
+	// A boss's bonus hit (CustomDamage.dealBonus, a CustomMobs.strikeBonus bolt), inside the i-frames its main hit
+	// started: never checks or starts them, and like a second vanilla hit inside them, no flinch,
+	// hurt sound or knockback. Its damage still lands in full.
+	public boolean bonus = false;
 	/** A pipeline-made explosion ({@code Utils.spawnTNT}), for Blast Protection; vanilla ones read their damage type. */
 	public boolean explosion = false;
 	/**

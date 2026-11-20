@@ -6,7 +6,7 @@ import misc.Utils;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.*;
 
-import static listeners.CustomDamage.calculateFinalDamage;
+import listeners.CustomDamage;
 
 public class Strong implements CustomDragon {
 	@Override
@@ -38,7 +38,7 @@ public class Strong implements CustomDragon {
 
 	@Override
 	public boolean whenDamaging(LivingEntity damagee, Entity damager, double originalDamage, DamageType type, DamageData data) {
-		calculateFinalDamage(damagee, damager, 4, DamageType.RANGED);
+		data.onLanded = () -> CustomDamage.dealBonus(damagee, damager, 4);
 		return true;
 	}
 }

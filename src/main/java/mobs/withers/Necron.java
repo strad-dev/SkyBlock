@@ -32,7 +32,7 @@ public class Necron implements CustomWither {
 
 	@Override
 	public boolean whenDamaging(LivingEntity damagee, Entity damager, double originalDamage, DamageType type, DamageData data) {
-		CustomDamage.calculateFinalDamage(damagee, damager, 4, DamageType.RANGED);
+		data.onLanded = () -> CustomDamage.dealBonus(damagee, damager, 4);
 		return true;
 	}
 

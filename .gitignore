@@ -10,3 +10,6 @@ MIGRATION_PLAYBOOK.md
 .claude/
 CLAUDE.md
 MAP.md
+
+# Paper's log4j writes here when a test touches NMS
+logs/

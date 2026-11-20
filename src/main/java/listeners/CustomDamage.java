@@ -85,16 +85,44 @@ public class CustomDamage implements Listener {
 
 	public static boolean inIFrames(Entity damagee, Entity damager) {
 		Map<UUID, Integer> timers = iFramesUntil.get(damagee);
-		if(timers == null) return false;
-		Integer until = timers.get(iFrameKey(damagee, damager));
-		return until != null && Bukkit.getCurrentTick() < until;
+		return timers != null && timerActive(timers, iFrameKey(damagee, damager), Bukkit.getCurrentTick());
 	}
 
 	public static void setIFrames(Entity damagee, Entity damager) {
-		int now = Bukkit.getCurrentTick();
-		Map<UUID, Integer> timers = iFramesUntil.computeIfAbsent(damagee, k -> new HashMap<>());
+		startTimer(iFramesUntil.computeIfAbsent(damagee, k -> new HashMap<>()), iFrameKey(damagee, damager), Bukkit.getCurrentTick());
+	}
+
+	static boolean timerActive(Map<UUID, Integer> timers, UUID key, int now) {
+		Integer until = timers.get(key);
+		return until != null && now < until;
+	}
+
+	/** Also drops expired timers, so a victim's map never grows past its live attackers. */
+	static void startTimer(Map<UUID, Integer> timers, UUID key, int now) {
 		timers.values().removeIf(until -> until <= now);
-		timers.put(iFrameKey(damagee, damager), now + IFRAME_TICKS);
+		timers.put(key, now + IFRAME_TICKS);
+	}
+
+	static boolean bypassesIFrames(DamageType type) {
+		return type == DamageType.RANGED || type == DamageType.RANGED_SPECIAL || type == DamageType.MAGIC
+				|| type == DamageType.PLAYER_MAGIC || type == DamageType.ABSOLUTE || type == DamageType.LETHAL_ABSOLUTE;
+	}
+
+	static boolean startsIFrames(DamageType type) {
+		return type == DamageType.MELEE || type == DamageType.MELEE_SWEEP || type == DamageType.IFRAME_ENVIRONMENTAL;
+	}
+
+	/** blocked: dropped by i-frames. upgrade: a bigger blow inside a player's i-frames, dealing {@code damage}. */
+	record IFrameHit(boolean blocked, boolean upgrade, double damage) {}
+
+	/**
+	 * Vanilla's rule, players only: a bigger blow inside the i-frames lands what it beats the last one by, with no
+	 * flinch or knockback, and doesn't restart them. A mob just ignores it. {@code previous} = the player's lastHurt.
+	 */
+	static IFrameHit iFrameHit(boolean inIFrames, DamageType type, boolean livePlayer, double previous, double damage) {
+		if(!inIFrames || bypassesIFrames(type)) return new IFrameHit(false, false, damage);
+		if(livePlayer && damage > previous) return new IFrameHit(false, true, damage - previous);
+		return new IFrameHit(true, false, damage);
 	}
 
 	public static void clearIFrames(Entity damagee, Entity damager) {
@@ -105,6 +133,40 @@ public class CustomDamage implements Listener {
 	// Stamped on a dragon when its death branch runs; the only way to tell a corpse from a live one. Vanilla animates
 	// death at 1 HP (EnderDragon.handleKillingBlow), so isDead() and getHealth() read alive for all 200 ticks.
 	public static final String DYING_DRAGON_TAG = "DyingDragon";
+
+	// Vanilla EnderDragon.hurt takes off once a perch has soaked 25% of max health (75 on the 300 HP Old Dragon). Every
+	// dragon takes off past a flat 50 instead, counted per perch. Vanilla's counter still runs, right after our handler
+	// inside its hurt, so it's pinned out of reach. Primal Dragon has its own (PERCH_MAX_DAMAGE).
+	private static final double PERCH_TAKEOFF_DAMAGE = 50;
+	private static final Map<EnderDragon, Double> perchDamage = new WeakHashMap<>();
+	private static Field sittingDamageReceived;
+
+	private static void notePerchDamage(EnderDragon dragon, double dealt) {
+		net.minecraft.world.entity.boss.enderdragon.EnderDragon nms = ((CraftEnderDragon) dragon).getHandle();
+		try {
+			if(sittingDamageReceived == null) {
+				sittingDamageReceived = net.minecraft.world.entity.boss.enderdragon.EnderDragon.class.getDeclaredField("sittingDamageReceived");
+				sittingDamageReceived.setAccessible(true);
+			}
+			sittingDamageReceived.setFloat(nms, -Float.MAX_VALUE);
+		} catch(ReflectiveOperationException e) {
+			e.printStackTrace();
+		}
+		if(dragon.getScoreboardTags().contains("PrimalDragon") || !nms.getPhaseManager().getCurrentPhase().isSitting()) return;
+		if(addPerchDamage(perchDamage, dragon, dealt)) nms.getPhaseManager().setPhase(EnderDragonPhase.TAKEOFF);
+	}
+
+	/** Adds a perched hit; true (and the count cleared) once the perch has taken more than {@link #PERCH_TAKEOFF_DAMAGE}. */
+	static <K> boolean addPerchDamage(Map<K, Double> perch, K dragon, double dealt) {
+		if(perch.merge(dragon, dealt, Double::sum) <= PERCH_TAKEOFF_DAMAGE) return false;
+		perch.remove(dragon);
+		return true;
+	}
+
+	@EventHandler
+	public void onDragonPhase(org.bukkit.event.entity.EnderDragonChangePhaseEvent e) {
+		perchDamage.remove(e.getEntity());
+	}
 
 	/** True while a dragon plays its death animation: a corpse, takes no damage. */
 	public static boolean isDyingDragon(Entity e) {
@@ -373,6 +435,48 @@ public class CustomDamage implements Listener {
 
 	public static final double CRIT_MULTIPLIER = 1.5;
 
+	/**
+	 * Everything but resistance. Knockback (melee only) else Punch, +25% a level; then melee crit x1.2 and sprint x1.5,
+	 * a Terminator arrow x0.25 (three in a volley = 75%), a shield block x0.5.
+	 */
+	static double knockbackModifiers(DamageType type, int knockbackLevel, int punchLevel, boolean crit, boolean sprinting,
+									 boolean termArrow, boolean blocking) {
+		boolean melee = type == DamageType.MELEE || type == DamageType.MELEE_SWEEP;
+		double modifiers = 1;
+		if(knockbackLevel > 0 && melee) modifiers += 0.25 * knockbackLevel;
+		else if(punchLevel > 0) modifiers += 0.25 * punchLevel;
+		if(type == DamageType.MELEE) {
+			if(crit) modifiers *= 1.2;
+			if(sprinting) modifiers *= 1.5;
+		}
+		if(termArrow) modifiers *= 0.25;
+		if(blocking) modifiers *= 0.5;
+		return modifiers;
+	}
+
+	record Knockback(double horizontal, double vertical) {}
+
+	/**
+	 * {@code antiKB} = 1 - knockback resistance, above 0. Vertical KB is a sqrt of resistance ONLY (modifiers never
+	 * change pop height). Horizontal uses antiKB^0.75 to offset the longer air time of that higher pop, so distance
+	 * stays ~linear in resistance (full netherite still lands ~60%) and exactly linear in the modifiers.
+	 */
+	static Knockback knockback(double antiKB, double modifiers) {
+		return new Knockback(0.4 * (antiKB <= 1 ? Math.pow(antiKB, 0.75) : antiKB) * modifiers, 0.4 * Math.sqrt(Math.min(antiKB, 1.0)));
+	}
+
+	/**
+	 * {@code dir}: horizontal unit vector, damager to target. First hit this tick keeps half the target's momentum, like
+	 * vanilla; a same-tick Terminator volley ({@code termStack}) adds on, keeping one hit's pop. Vertical pop only when
+	 * grounded; an airborne target keeps its Y, like vanilla, so mid-air hits don't cancel a fall or jump.
+	 */
+	static Vector knockbackVelocity(Vector old, Vector dir, double horizontal, double vertical, boolean onGround, boolean termStack) {
+		if(termStack) {
+			return new Vector(old.getX() + dir.getX() * horizontal, onGround ? Math.max(old.getY(), vertical) : old.getY(), old.getZ() + dir.getZ() * horizontal);
+		}
+		return new Vector(old.getX() * 0.5 + dir.getX() * horizontal, onGround ? vertical : old.getY(), old.getZ() * 0.5 + dir.getZ() * horizontal);
+	}
+
 	private static final double ARMOR_CURVE_K = 5;
 
 	public static double armorMultiplier(double armor) {
@@ -551,6 +655,13 @@ public class CustomDamage implements Listener {
 
 	public static void calculateFinalDamage(LivingEntity damagee, Entity damager, double finalDamage, DamageType type) {
 		calculateFinalDamage(damagee, damager, finalDamage, type, new DamageData(damagee, damager, finalDamage));
+	}
+
+	/** A boss's bonus hit, from its {@code DamageData.onLanded}: RANGED, a {@link DamageData#bonus}. */
+	public static void dealBonus(LivingEntity damagee, Entity damager, double damage) {
+		DamageData data = new DamageData(damagee, damager, damage);
+		data.bonus = true;
+		calculateFinalDamage(damagee, damager, damage, DamageType.RANGED, data);
 	}
 
 	public static final double FALL_FLAT_REDUCTION = 1;
@@ -775,23 +886,25 @@ public class CustomDamage implements Listener {
 	}
 
 	private static void dealDamage(LivingEntity damagee, Entity damager, double finalDamage, DamageType type, DamageData data) {
-		boolean iFramed = inIFrames(damagee, damager) && type != DamageType.RANGED && type != DamageType.RANGED_SPECIAL && type != DamageType.MAGIC && type != DamageType.PLAYER_MAGIC && type != DamageType.ABSOLUTE && type != DamageType.LETHAL_ABSOLUTE;
-		// Vanilla's rule, players only: a bigger blow inside the i-frames lands what it beats the last one by, with no
-		// flinch or knockback, and doesn't restart them. A mob just ignores it.
-		boolean upgrade = false;
-		if(iFramed && damagee instanceof Player && !damagee.isDead()) {
-			double previous = lastHurt.getOrDefault(damagee, 0.0);
-			if(finalDamage > previous) {
-				lastHurt.put(damagee, finalDamage);
-				finalDamage -= previous;
-				upgrade = true;
-				iFramed = false;
-			} else if(type == DamageType.MELEE) {
-				pvp.PvpHooks.trackHit(damagee, damager, 0.0, false, false, true);
-			}
+		boolean livePlayer = damagee instanceof Player && !damagee.isDead();
+		IFrameHit iFrameHit = iFrameHit(inIFrames(damagee, damager) && !data.bonus, type, livePlayer, lastHurt.getOrDefault(damagee, 0.0), finalDamage);
+		if(iFrameHit.upgrade()) {
+			lastHurt.put(damagee, finalDamage);
+		} else if(iFrameHit.blocked() && livePlayer && type == DamageType.MELEE) {
+			pvp.PvpHooks.trackHit(damagee, damager, 0.0, false, false, true);
 		}
+		boolean iFramed = iFrameHit.blocked();
+		boolean upgrade = iFrameHit.upgrade();
+		finalDamage = iFrameHit.damage();
 		double hitDamage = finalDamage;
-		if((!damagee.isDead() || data.feedbackOnly) && (finalDamage > 0 || type == DamageType.RANGED || type == DamageType.RANGED_SPECIAL || curledArmadillo(damagee)) && !iFramed) {
+		boolean lands = (!damagee.isDead() || data.feedbackOnly) && (finalDamage > 0 || type == DamageType.RANGED || type == DamageType.RANGED_SPECIAL || curledArmadillo(damagee)) && !iFramed;
+		// Before the hit, where whenDamaging used to deal it; it can kill, hence the second isDead check.
+		if(lands && data.onLanded != null) {
+			Runnable bonus = data.onLanded;
+			data.onLanded = null;
+			bonus.run();
+		}
+		if(lands && (!damagee.isDead() || data.feedbackOnly)) {
 			// sweeping edge
 			if(type == DamageType.MELEE && damager instanceof LivingEntity temp && temp.getEquipment().getItemInMainHand().containsEnchantment(Enchantment.SWEEPING_EDGE)) {
 				int level = temp.getEquipment().getItemInMainHand().getEnchantmentLevel(Enchantment.SWEEPING_EDGE);
@@ -807,7 +920,7 @@ public class CustomDamage implements Listener {
 			double absorption = damagee.getAbsorptionAmount();
 			double oldHealth = damagee.getHealth();
 
-			if(!upgrade) hurtEffects(damagee, data, !data.feedbackOnly && finalDamage >= oldHealth + absorption);
+			if(!upgrade && !data.bonus) hurtEffects(damagee, data, !data.feedbackOnly && finalDamage >= oldHealth + absorption);
 
 			// What the blow landed, for abilities that report their own damage (Hyperion implosion counter). Set
 			// here since it's the final figure: the absorption split below spends part of it and the health removed
@@ -1097,6 +1210,7 @@ public class CustomDamage implements Listener {
 						if(damagee instanceof EnderDragon dragon) {
 							if(!(dragon instanceof CraftEnderDragon)) return;
 							dragon.addScoreboardTag(DYING_DRAGON_TAG); // a corpse from here on, see isDyingDragon
+							dragon.getWorld().getEntitiesByClass(org.bukkit.entity.DragonFireball.class).forEach(Entity::remove);
 							net.minecraft.world.entity.boss.enderdragon.EnderDragon nmsDragon = ((CraftEnderDragon) dragon).getHandle();
 							nmsDragon.getPhaseManager().setPhase(EnderDragonPhase.DYING);
 							DragonPhaseInstance phase = nmsDragon.getPhaseManager().getCurrentPhase();
@@ -1191,9 +1305,14 @@ public class CustomDamage implements Listener {
 				damagee.setHealth(oldHealth - finalDamage);
 				replayHurtEffects(damagee, data, finalDamage);
 				armadilloReaction(damagee, damager, data);
-				if(!upgrade && (type == DamageType.MELEE || type == DamageType.MELEE_SWEEP || type == DamageType.IFRAME_ENVIRONMENTAL)) {
+				if(!upgrade && !data.bonus && startsIFrames(type)) {
 					setIFrames(damagee, damager);
 					if(damagee instanceof Player) lastHurt.put(damagee, hitDamage);
+				}
+				// What vanilla counts toward a perch: player damage (any route here) and explosions.
+				if(damagee instanceof EnderDragon dragon && (numberFor != null && dotColour == null
+						|| data.e != null && (data.e.getCause() == DamageCause.BLOCK_EXPLOSION || data.e.getCause() == DamageCause.ENTITY_EXPLOSION))) {
+					notePerchDamage(dragon, finalDamage);
 				}
 
 				if(damagee instanceof Mob && damager instanceof LivingEntity) {
@@ -1215,50 +1334,24 @@ public class CustomDamage implements Listener {
 
 				if(damagee instanceof EnderDragon dragon && data.e != null && data.e.getCause() == DamageCause.BLOCK_EXPLOSION) {
 					damager = Utils.getNearestPlayer(dragon, 16);
-				} else if(isPhysicalHit && damager != null && !upgrade) {
+				} else if(isPhysicalHit && damager != null && !upgrade && !data.bonus) {
 					// apply knockback
 					double antiKB = 1 - Objects.requireNonNull(damagee.getAttribute(Attribute.KNOCKBACK_RESISTANCE)).getValue();
 					// Fully knockback-resistant (antiKB <= 0): motion untouched, as vanilla, and no sqrt of a non-positive.
 					if(antiKB > 0) {
-						double enchantments = 1;
-
+						int knockbackLevel = 0, punchLevel = 0;
 						if(damager instanceof LivingEntity livingEntity) {
-							if(livingEntity.getEquipment().getItemInMainHand().containsEnchantment(Enchantment.KNOCKBACK) && (type == DamageType.MELEE || type == DamageType.MELEE_SWEEP)) {
-								enchantments += 0.25 * livingEntity.getEquipment().getItemInMainHand().getEnchantmentLevel(Enchantment.KNOCKBACK);
-							} else if(data.punchArrow > 0) {
-								enchantments += 0.25 * data.punchArrow;
-							}
+							knockbackLevel = livingEntity.getEquipment().getItemInMainHand().getEnchantmentLevel(Enchantment.KNOCKBACK);
+							punchLevel = data.punchArrow;
 						}
-
-						// All non-resistance knockback modifiers (enchant, sprint, crit, block, term).
-						double modifiers = enchantments;
-
-						if(type == DamageType.MELEE) {
-							// Use the crit the DAMAGE was priced with, not a fresh getFallDistance() test: that is looser than
-							// canCrit (cooldown, ladder, water, crits enabled), so a half-charged falling swing got crit knockback
-							// on a normal hit, and a falling MOB got the bonus.
-							if(data.isCrit) {
-								modifiers *= 1.2;
-							}
-
-							if(damager instanceof Player p && p.isSprinting()) {
-								modifiers *= 1.5;
-							}
-						}
-
-						if(data.isTermArrow) {
-							modifiers *= 0.33333;
-						}
-
-						if(data.isBlocking) {
-							modifiers *= 0.5;
-						}
-
-						// Vertical KB is a sqrt of knockback resistance ONLY (enchant/sprint/block never change pop height).
-						// Horizontal uses antiKB^0.75 to offset the longer air time of that higher pop, so distance stays
-						// ~linear in resistance (full netherite still lands ~60%) and exactly linear in the modifiers.
-						double vertical = 0.4 * Math.sqrt(Math.min(antiKB, 1.0));
-						double horizontal = 0.4 * (antiKB <= 1 ? Math.pow(antiKB, 0.75) : antiKB) * modifiers;
+						// The crit the DAMAGE was priced with, not a fresh getFallDistance() test: that is looser than canCrit
+						// (cooldown, ladder, water, crits enabled), so a half-charged falling swing got crit knockback on a
+						// normal hit, and a falling MOB got the bonus.
+						double modifiers = knockbackModifiers(type, knockbackLevel, punchLevel, data.isCrit,
+								damager instanceof Player p && p.isSprinting(), data.isTermArrow, data.isBlocking);
+						Knockback kb = knockback(antiKB, modifiers);
+						double vertical = kb.vertical();
+						double horizontal = kb.horizontal();
 
 						// Calculate knockback direction from damager to damagee
 						Vector knockbackDir = damagee.getLocation().toVector().subtract(damager.getLocation().toVector());
@@ -1273,15 +1366,7 @@ public class CustomDamage implements Listener {
 						// Apply knockback
 						boolean termStack = data.isTermArrow && Integer.valueOf(MinecraftServer.currentTick).equals(lastTermKnockbackTick.get(damagee));
 						Vector oldVelocity = termStack ? damagee.getVelocity() : currentVelocity(damagee);
-						Vector newVelocity;
-						if(termStack) {
-							// Same-tick Terminator volley: stack horizontally so the three 1/3 hits add up, keeping one hit's pop.
-							newVelocity = new Vector(oldVelocity.getX() + knockbackDir.getX() * horizontal, (damagee.isOnGround() ? Math.max(oldVelocity.getY(), vertical) : oldVelocity.getY()), oldVelocity.getZ() + knockbackDir.getZ() * horizontal);
-						} else {
-							// First hit this tick: keep half the target's momentum, like vanilla. Vertical pop only when
-							// grounded; an airborne target keeps its Y, like vanilla, so mid-air hits don't cancel a fall or jump.
-							newVelocity = new Vector(oldVelocity.getX() * 0.5 + knockbackDir.getX() * horizontal, (damagee.isOnGround() ? vertical : oldVelocity.getY()), oldVelocity.getZ() * 0.5 + knockbackDir.getZ() * horizontal);
-						}
+						Vector newVelocity = knockbackVelocity(oldVelocity, knockbackDir, horizontal, vertical, damagee.isOnGround(), termStack);
 
 						damagee.setVelocity(newVelocity);
 
@@ -1797,8 +1882,12 @@ public class CustomDamage implements Listener {
 					}
 				}
 
+				// A bonus bolt strikes on several ticks: only its first hit on each target counts.
+				boolean bonusBolt = CustomMobs.isBonusBolt(e.getDamager());
+				if(bonusBolt && !CustomMobs.firstBonusHit(e.getDamager(), entity)) return;
+
 				// A player's i-frames are settled in dealDamage, which needs the blow priced first.
-				if(!inIFrames(entity, e.getDamager()) || e.getDamager() instanceof AbstractArrow || entity instanceof Player) {
+				if(!inIFrames(entity, e.getDamager()) || e.getDamager() instanceof AbstractArrow || entity instanceof Player || bonusBolt) {
 					Entity damager = e.getDamager();
 					uncurl(entity, e);
 
@@ -1840,6 +1929,7 @@ public class CustomDamage implements Listener {
 
 					DamageData data = new DamageData(e);
 					data.isCrit = crit;
+					data.bonus = bonusBolt;
 					customMobs(entity, damager, e.getDamage(), type, data);
 				}
 			}

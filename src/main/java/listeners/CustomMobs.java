@@ -79,10 +79,43 @@ public class CustomMobs implements Listener {
 		});
 	}
 
+	// A bolt riding on a hit (Storm's bonus) -> what it has hit. A bolt strikes on several ticks and vanilla leans on
+	// i-frames to make that one hit, but the hit that called it has just started the target's i-frames.
+	private static final java.util.Map<Entity, java.util.Set<java.util.UUID>> bonusBolts = new java.util.WeakHashMap<>();
+
+	/** Lands once per target and never meets i-frames, so the hit that called it can't block it. */
+	public static void strikeBonus(Location l, double damage) {
+		l.getWorld().spawn(l, LightningStrike.class, bolt -> {
+			bolt.getPersistentDataContainer().set(boltKey(), PersistentDataType.DOUBLE, damage);
+			bonusBolts.put(bolt, new java.util.HashSet<>());
+		});
+	}
+
+	public static boolean isBonusBolt(Entity e) {
+		return bonusBolts.containsKey(e);
+	}
+
+	/** True the first time this bonus bolt hits {@code target}, false after. */
+	public static boolean firstBonusHit(Entity bolt, Entity target) {
+		java.util.Set<java.util.UUID> hit = bonusBolts.get(bolt);
+		return hit != null && hit.add(target.getUniqueId());
+	}
+
 	public static double boltDamage(Entity e) {
 		if(!(e instanceof LightningStrike bolt)) return 0;
 		Double damage = bolt.getPersistentDataContainer().get(boltKey(), PersistentDataType.DOUBLE);
 		return damage == null ? 0 : damage;
+	}
+
+	private static final java.util.Set<org.bukkit.Material> DRAGON_PROOF = java.util.EnumSet.of(org.bukkit.Material.BEACON,
+			org.bukkit.Material.IRON_BLOCK, org.bukkit.Material.GOLD_BLOCK, org.bukkit.Material.DIAMOND_BLOCK,
+			org.bukkit.Material.EMERALD_BLOCK, org.bukkit.Material.NETHERITE_BLOCK);
+
+	// EnderDragon.checkWalls reports the blocks it flies through as an explode event, and only breaks what's left in
+	// the list. Beacons and their bases stay.
+	@EventHandler(ignoreCancelled = true)
+	public void onDragonGrief(org.bukkit.event.entity.EntityExplodeEvent e) {
+		if(e.getEntity() instanceof EnderDragon) e.blockList().removeIf(b -> DRAGON_PROOF.contains(b.getType()));
 	}
 
 	@EventHandler(ignoreCancelled = true)

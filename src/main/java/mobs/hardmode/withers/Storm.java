@@ -20,7 +20,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
-import static listeners.CustomDamage.calculateFinalDamage;
+import listeners.CustomDamage;
 import static misc.Utils.teleport;
 
 public class Storm implements CustomWither {
@@ -271,12 +271,14 @@ public class Storm implements CustomWither {
 		if(damagee instanceof Wither || damagee instanceof WitherSkeleton) {
 			return false;
 		}
-		if(damager.getScoreboardTags().contains("Survival1")) {
-			calculateFinalDamage(damagee, damager, 12, DamageType.RANGED);
-		} else if(damager.getScoreboardTags().contains("Survival2")) {
-			calculateFinalDamage(damagee, damager, 18, DamageType.RANGED);
-		}
-		CustomMobs.strike(damagee.getLocation(), LIGHTNING_DAMAGE);
+		data.onLanded = () -> {
+			if(damager.getScoreboardTags().contains("Survival1")) {
+				CustomDamage.dealBonus(damagee, damager, 12);
+			} else if(damager.getScoreboardTags().contains("Survival2")) {
+				CustomDamage.dealBonus(damagee, damager, 18);
+			}
+			CustomMobs.strikeBonus(damagee.getLocation(), LIGHTNING_DAMAGE);
+		};
 		return true;
 	}
 
