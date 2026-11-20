@@ -17,14 +17,14 @@ import java.util.Map;
  * {@link #skyblockId()} and not a row in {@link misc.SkyblockId}'s {@code IDS} (all eight would collide).
  */
 public enum ManhuntTier {
-	BASE(Material.STICK, "", Rarity.COMMON,                            0, 0, 25, 1, 0.00, 200, 0.5, 7,  160, 150, 0),
-	WOOD(Material.WOODEN_SWORD, "Wooden", Rarity.COMMON,               8, 2, 25, 3, 0.05, 200, 1.5, 7,  160, 200, 10),
-	STONE(Material.STONE_SWORD, "Stone", Rarity.UNCOMMON,              8, 3, 25, 4, 0.06, 200, 2,   7,  160, 250, 12),
-	COPPER(Material.COPPER_SWORD, "Copper", Rarity.UNCOMMON,           6, 3, 25, 4, 0.06, 180, 2,   8,  160, 350, 14),
-	IRON(Material.IRON_SWORD, "Iron", Rarity.RARE,                     4, 4, 20, 5, 0.07, 180, 2.5, 8,  140, 350, 16),
-	GOLD(Material.GOLDEN_SWORD, "Golden", Rarity.RARE,                 4, 4, 20, 5, 0.07, 160, 2.5, 9,  140, 450, 18),
-	DIAMOND(Material.DIAMOND_SWORD, "Diamond", Rarity.EPIC,            2, 5, 20, 6, 0.08, 160, 3,   9,  120, 450, 20),
-	NETHERITE(Material.NETHERITE_SWORD, "Netherite", Rarity.LEGENDARY, 1, 6, 20, 8, 0.10, 150, 3.5, 10, 100, 600, 25);
+	BASE(Material.STICK, "", Rarity.COMMON,                            0, 0.5, 25, 1, 0.00, 200, 0.5, 7,  160, 150, 0),
+	WOOD(Material.WOODEN_SWORD, "Wooden", Rarity.COMMON,               8, 2.5, 25, 3, 0.05, 200, 1.5, 7,  160, 200, 10),
+	STONE(Material.STONE_SWORD, "Stone", Rarity.UNCOMMON,              8, 3.5, 25, 4, 0.06, 200, 2,   7,  160, 250, 12),
+	COPPER(Material.COPPER_SWORD, "Copper", Rarity.UNCOMMON,           6, 3.5, 25, 4, 0.06, 180, 2,   8,  160, 350, 14),
+	IRON(Material.IRON_SWORD, "Iron", Rarity.RARE,                     4, 4.5, 20, 5, 0.07, 180, 2.5, 8,  140, 350, 16),
+	GOLD(Material.GOLDEN_SWORD, "Golden", Rarity.RARE,                 4, 4.5, 20, 5, 0.07, 160, 2.5, 9,  140, 450, 18),
+	DIAMOND(Material.DIAMOND_SWORD, "Diamond", Rarity.EPIC,            2, 5.5, 20, 6, 0.08, 160, 3,   9,  120, 450, 20),
+	NETHERITE(Material.NETHERITE_SWORD, "Netherite", Rarity.LEGENDARY, 1, 6.5, 20, 8, 0.10, 150, 3.5, 10, 100, 600, 25);
 
 	/** Full Hyperion's regen and cap. */
 	public static final int FULL_TICKS_PER_MANA = 80;
