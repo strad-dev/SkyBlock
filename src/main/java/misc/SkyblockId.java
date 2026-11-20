@@ -18,7 +18,8 @@ import java.util.function.Consumer;
  * <p><b>Keyed on the lore id</b>, so a build method just calls {@code stamp(...)}. Exception: the Manhunt
  * Hyperion's eight rungs share one lore id, so its id lives on {@link manhunt.ManhuntTier}.
  *
- * <p>Absent = <b>no real counterpart</b> (Necron's Elytra, Ancient Dragon Egg, Wither Lords' secrets, six of seven
+ * <p>Absent = <b>no real counterpart</b> (Necron's Elytra as an elytra; its chestplate form is stamped in
+ * {@code NecronElytra}), Ancient Dragon Egg, Wither Lords' secrets, six of seven
  * Refined metals, Manhunt Compass). Those get nothing, since a wrong id retextures an item as the wrong thing.
  * Every id was checked against {@code api.hypixel.net/v2/resources/skyblock/items}.
  *

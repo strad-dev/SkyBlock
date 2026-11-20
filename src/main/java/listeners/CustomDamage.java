@@ -714,7 +714,7 @@ public class CustomDamage implements Listener {
 		if(curledArmadillo(entity)) e.setDamage(e.getDamage() * 2 + 1);
 	}
 
-	private static void hurtEffects(LivingEntity damagee, DamageData data) {
+	private static void hurtEffects(LivingEntity damagee, DamageData data, boolean lethal) {
 		net.minecraft.world.entity.LivingEntity nms = ((CraftLivingEntity) damagee).getHandle();
 		float hurtYaw = 0.0F;
 		if(data.sourcePosition != null) {
@@ -728,6 +728,7 @@ public class CustomDamage implements Listener {
 		if(!(nms.level() instanceof ServerLevel level)) return;
 		DamageSource source = data.e != null ? convertBukkitDamageSource(data.e.getDamageSource(), damagee) : nms.damageSources().generic();
 		level.broadcastDamageEvent(nms, source);
+		if(lethal) return;
 		net.minecraft.sounds.SoundEvent sound = nms.getHurtSound(source);
 		if(sound != null) {
 			level.playSound(damagee instanceof Player ? nms : null, nms.getX(), nms.getY(), nms.getZ(), sound, nms.getSoundSource(), nms.getSoundVolume(), nms.getVoicePitch());
@@ -784,10 +785,10 @@ public class CustomDamage implements Listener {
 				}
 			}
 
-			hurtEffects(damagee, data);
-
 			double absorption = damagee.getAbsorptionAmount();
 			double oldHealth = damagee.getHealth();
+
+			hurtEffects(damagee, data, !data.feedbackOnly && finalDamage >= oldHealth + absorption);
 
 			// What the blow landed, for abilities that report their own damage (Hyperion implosion counter). Set
 			// here since it's the final figure: the absorption split below spends part of it and the health removed
@@ -1150,7 +1151,10 @@ public class CustomDamage implements Listener {
 								recordKillingBlow(damagee, damager, data, finalDamage);
 							}
 							replayHurtEffects(damagee, data, finalDamage);
+							net.minecraft.world.entity.LivingEntity nmsDamagee = ((CraftLivingEntity) damagee).getHandle();
+							nmsDamagee.silentDeath = false;
 							damagee.setHealth(0.0);
+							nmsDamagee.silentDeath = true;
 						}
 					}
 				}

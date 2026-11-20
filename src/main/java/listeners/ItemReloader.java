@@ -384,7 +384,7 @@ public class ItemReloader implements Listener {
 			case "skyblock/combat/sword_of_bad_health" -> SwordOfBadHealth.getItem(item.getEnchantments());
 			case "skyblock/combat/warden_helmet" -> WardenHelmet.getItem();
 			case "skyblock/combat/wither_king_crown" -> WitherKingCrown.getItem();
-			case "skyblock/combat/necron_elytra" -> NecronElytra.getItem();
+			case NecronElytra.ID -> NecronElytra.getItem(NecronElytra.isChestplate(item));
 			case "skyblock/combat/primal_chestplate" -> PrimalDragonChestplate.getItem();
 			case "skyblock/combat/goldor_pants" -> GoldorLeggings.getItem();
 			case "skyblock/combat/necromancer_pants" -> NecromancerLordLeggings.getItem();

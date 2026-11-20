@@ -112,6 +112,7 @@ public class Plugin extends JavaPlugin implements Listener {
 		getServer().getPluginManager().registerEvents(new CustomMobs(), this);
 		getServer().getPluginManager().registerEvents(new CustomDrops(), this);
 		getServer().getPluginManager().registerEvents(new EditSkull(), this);
+		getServer().getPluginManager().registerEvents(new NecronElytraToggle(), this);
 		getServer().getPluginManager().registerEvents(new CustomDamage(), this);
 		getServer().getPluginManager().registerEvents(new DragonNeck(), this); // BACKPORT - delete on 26.3
 		getServer().getPluginManager().registerEvents(new DragonFlight(), this); // BACKPORT - delete on 26.4
