@@ -69,12 +69,15 @@ public class CustomDamage implements Listener {
 	// Last tick each entity took Terminator knockback, so a same-tick volley of 3 arrows stacks instead of overwriting.
 	private static final Map<Entity, Integer> lastTermKnockbackTick = new WeakHashMap<>();
 
-	// Melee i-frames, one timer per attacking player; every non-player attacker shares one.
+	// Melee i-frames. A mob keeps one timer per attacking player, every non-player attacker sharing one; a player keeps
+	// one timer for everything, vanilla's, with lastHurt (see dealDamage).
 	private static final int IFRAME_TICKS = 9;
 	private static final UUID SHARED_IFRAMES = new UUID(0, 0);
 	private static final Map<Entity, Map<UUID, Integer>> iFramesUntil = new WeakHashMap<>();
+	private static final Map<Entity, Double> lastHurt = new WeakHashMap<>();
 
-	private static UUID iFrameKey(Entity damager) {
+	private static UUID iFrameKey(Entity damagee, Entity damager) {
+		if(damagee instanceof Player) return SHARED_IFRAMES;
 		if(damager instanceof Player p) return p.getUniqueId();
 		if(damager instanceof Projectile projectile && projectile.getShooter() instanceof Player p) return p.getUniqueId();
 		return SHARED_IFRAMES;
@@ -83,7 +86,7 @@ public class CustomDamage implements Listener {
 	public static boolean inIFrames(Entity damagee, Entity damager) {
 		Map<UUID, Integer> timers = iFramesUntil.get(damagee);
 		if(timers == null) return false;
-		Integer until = timers.get(iFrameKey(damager));
+		Integer until = timers.get(iFrameKey(damagee, damager));
 		return until != null && Bukkit.getCurrentTick() < until;
 	}
 
@@ -91,12 +94,12 @@ public class CustomDamage implements Listener {
 		int now = Bukkit.getCurrentTick();
 		Map<UUID, Integer> timers = iFramesUntil.computeIfAbsent(damagee, k -> new HashMap<>());
 		timers.values().removeIf(until -> until <= now);
-		timers.put(iFrameKey(damager), now + IFRAME_TICKS);
+		timers.put(iFrameKey(damagee, damager), now + IFRAME_TICKS);
 	}
 
 	public static void clearIFrames(Entity damagee, Entity damager) {
 		Map<UUID, Integer> timers = iFramesUntil.get(damagee);
-		if(timers != null) timers.remove(iFrameKey(damager));
+		if(timers != null) timers.remove(iFrameKey(damagee, damager));
 	}
 
 	// Stamped on a dragon when its death branch runs; the only way to tell a corpse from a live one. Vanilla animates
@@ -772,7 +775,23 @@ public class CustomDamage implements Listener {
 	}
 
 	private static void dealDamage(LivingEntity damagee, Entity damager, double finalDamage, DamageType type, DamageData data) {
-		if((!damagee.isDead() || data.feedbackOnly) && (finalDamage > 0 || type == DamageType.RANGED || type == DamageType.RANGED_SPECIAL || curledArmadillo(damagee)) && (!inIFrames(damagee, damager) || type == DamageType.RANGED || type == DamageType.RANGED_SPECIAL || type == DamageType.MAGIC || type == DamageType.PLAYER_MAGIC || type == DamageType.ABSOLUTE || type == DamageType.LETHAL_ABSOLUTE)) {
+		boolean iFramed = inIFrames(damagee, damager) && type != DamageType.RANGED && type != DamageType.RANGED_SPECIAL && type != DamageType.MAGIC && type != DamageType.PLAYER_MAGIC && type != DamageType.ABSOLUTE && type != DamageType.LETHAL_ABSOLUTE;
+		// Vanilla's rule, players only: a bigger blow inside the i-frames lands what it beats the last one by, with no
+		// flinch or knockback, and doesn't restart them. A mob just ignores it.
+		boolean upgrade = false;
+		if(iFramed && damagee instanceof Player && !damagee.isDead()) {
+			double previous = lastHurt.getOrDefault(damagee, 0.0);
+			if(finalDamage > previous) {
+				lastHurt.put(damagee, finalDamage);
+				finalDamage -= previous;
+				upgrade = true;
+				iFramed = false;
+			} else if(type == DamageType.MELEE) {
+				pvp.PvpHooks.trackHit(damagee, damager, 0.0, false, false, true);
+			}
+		}
+		double hitDamage = finalDamage;
+		if((!damagee.isDead() || data.feedbackOnly) && (finalDamage > 0 || type == DamageType.RANGED || type == DamageType.RANGED_SPECIAL || curledArmadillo(damagee)) && !iFramed) {
 			// sweeping edge
 			if(type == DamageType.MELEE && damager instanceof LivingEntity temp && temp.getEquipment().getItemInMainHand().containsEnchantment(Enchantment.SWEEPING_EDGE)) {
 				int level = temp.getEquipment().getItemInMainHand().getEnchantmentLevel(Enchantment.SWEEPING_EDGE);
@@ -788,7 +807,7 @@ public class CustomDamage implements Listener {
 			double absorption = damagee.getAbsorptionAmount();
 			double oldHealth = damagee.getHealth();
 
-			hurtEffects(damagee, data, !data.feedbackOnly && finalDamage >= oldHealth + absorption);
+			if(!upgrade) hurtEffects(damagee, data, !data.feedbackOnly && finalDamage >= oldHealth + absorption);
 
 			// What the blow landed, for abilities that report their own damage (Hyperion implosion counter). Set
 			// here since it's the final figure: the absorption split below spends part of it and the health removed
@@ -1172,8 +1191,9 @@ public class CustomDamage implements Listener {
 				damagee.setHealth(oldHealth - finalDamage);
 				replayHurtEffects(damagee, data, finalDamage);
 				armadilloReaction(damagee, damager, data);
-				if(type == DamageType.MELEE || type == DamageType.MELEE_SWEEP || type == DamageType.IFRAME_ENVIRONMENTAL) {
+				if(!upgrade && (type == DamageType.MELEE || type == DamageType.MELEE_SWEEP || type == DamageType.IFRAME_ENVIRONMENTAL)) {
 					setIFrames(damagee, damager);
+					if(damagee instanceof Player) lastHurt.put(damagee, hitDamage);
 				}
 
 				if(damagee instanceof Mob && damager instanceof LivingEntity) {
@@ -1195,7 +1215,7 @@ public class CustomDamage implements Listener {
 
 				if(damagee instanceof EnderDragon dragon && data.e != null && data.e.getCause() == DamageCause.BLOCK_EXPLOSION) {
 					damager = Utils.getNearestPlayer(dragon, 16);
-				} else if(isPhysicalHit && damager != null) {
+				} else if(isPhysicalHit && damager != null && !upgrade) {
 					// apply knockback
 					double antiKB = 1 - Objects.requireNonNull(damagee.getAttribute(Attribute.KNOCKBACK_RESISTANCE)).getValue();
 					// Fully knockback-resistant (antiKB <= 0): motion untouched, as vanilla, and no sqrt of a non-positive.
@@ -1258,9 +1278,9 @@ public class CustomDamage implements Listener {
 							// Same-tick Terminator volley: stack horizontally so the three 1/3 hits add up, keeping one hit's pop.
 							newVelocity = new Vector(oldVelocity.getX() + knockbackDir.getX() * horizontal, (damagee.isOnGround() ? Math.max(oldVelocity.getY(), vertical) : oldVelocity.getY()), oldVelocity.getZ() + knockbackDir.getZ() * horizontal);
 						} else {
-							// First hit this tick: keep 10% of the target's momentum. Vertical pop only when grounded; an
-							// airborne target keeps its Y, like vanilla, so mid-air hits don't cancel a fall or jump.
-							newVelocity = new Vector(oldVelocity.getX() * 0.1 + knockbackDir.getX() * horizontal, (damagee.isOnGround() ? vertical : oldVelocity.getY()), oldVelocity.getZ() * 0.1 + knockbackDir.getZ() * horizontal);
+							// First hit this tick: keep half the target's momentum, like vanilla. Vertical pop only when
+							// grounded; an airborne target keeps its Y, like vanilla, so mid-air hits don't cancel a fall or jump.
+							newVelocity = new Vector(oldVelocity.getX() * 0.5 + knockbackDir.getX() * horizontal, (damagee.isOnGround() ? vertical : oldVelocity.getY()), oldVelocity.getZ() * 0.5 + knockbackDir.getZ() * horizontal);
 						}
 
 						damagee.setVelocity(newVelocity);
@@ -1777,11 +1797,8 @@ public class CustomDamage implements Listener {
 					}
 				}
 
-				// A PvP-suppressed blow never lands (customMobs stops at the same shouldBlock), so it must not pay out
-				// either: no hit stat, no intelligence. Always false off pvp / with PvP disabled.
-				boolean pvpBlocked = pvp.PvpHooks.shouldBlock(entity, e.getDamager());
-
-				if(!inIFrames(entity, e.getDamager()) || e.getDamager() instanceof AbstractArrow) {
+				// A player's i-frames are settled in dealDamage, which needs the blow priced first.
+				if(!inIFrames(entity, e.getDamager()) || e.getDamager() instanceof AbstractArrow || entity instanceof Player) {
 					Entity damager = e.getDamager();
 					uncurl(entity, e);
 
@@ -1824,10 +1841,6 @@ public class CustomDamage implements Listener {
 					DamageData data = new DamageData(e);
 					data.isCrit = crit;
 					customMobs(entity, damager, e.getDamage(), type, data);
-				} else if(!pvpBlocked && type == DamageType.MELEE && e.getDamager() instanceof Player) {
-					// Blow connected but i-frames negate it: no damage, never reaches dealDamage, but it still counts as
-					// a PvP i-frame hit (never a crit). Inert off pvp / outside a duel.
-					pvp.PvpHooks.trackHit(entity, e.getDamager(), 0.0, false, false, true);
 				}
 			}
 		}
